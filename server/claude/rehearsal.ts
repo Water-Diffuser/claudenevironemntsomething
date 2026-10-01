@@ -94,6 +94,63 @@ function pickEditLine(cwd: string, files: string[]) {
   return null;
 }
 
+/** How many lines a file has (for plausible line numbers in the fake stack traces). */
+function lineCountOf(cwd: string, rel: string): number {
+  try {
+    return fs.readFileSync(path.join(cwd, rel), 'utf8').split('\n').length;
+  } catch {
+    return 40;
+  }
+}
+
+/** Vitest-style test output with one failure whose stack trace points at REAL files in your project. */
+function fakeTestOutput(cwd: string, files: string[]): string {
+  const f1 = files[0] ?? 'src/index.ts';
+  const f2 = files[1] ?? files[0] ?? 'src/util.ts';
+  const f3 = files[2] ?? f1;
+  const testOf = (f: string) => f.replace(/(\.\w+)$/, '.test$1');
+  const at = (f: string) => 3 + Math.floor(Math.random() * Math.max(2, lineCountOf(cwd, f) - 6));
+  return `
+ RUN  v1.6.0 ${cwd}
+
+ ✓ ${testOf(f1)} (3 tests) 6ms
+   ✓ does the first thing 2ms
+   ✓ handles the happy path 1ms
+   ✓ keeps its promises 3ms
+ ❯ ${testOf(f2)} (3 tests | 1 failed) 9ms
+   ✓ parses a line 1ms
+   × rejects empty input 4ms
+     → expected '' to equal 'x'
+   ✓ formats the output 2ms
+ ✓ ${testOf(f3)} (2 tests) 3ms
+   ✓ starts up 1ms
+   ✓ shuts down 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ${testOf(f2)} > rejects empty input
+AssertionError: expected '' to equal 'x'
+
+- Expected: "x"
++ Received: ""
+
+ ❯ handleInput ${f2}:${at(f2)}:11
+ ❯ ${testOf(f2)}:8:5
+ ❯ run ${f1}:${at(f1)}:3
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 7 passed (8)
+   Duration  431ms
+`;
+}
+
+const FAKE_BUILD_OUTPUT = `vite v5.4.0 building for production...
+✓ 42 modules transformed.
+dist/index.html          0.46 kB
+dist/assets/index.css   12.30 kB
+dist/assets/index.js   214.82 kB
+✓ built in 1.24s`;
+
 // ---- the performance ---------------------------------------------------------
 export async function runRehearsal(ctx: RehearsalCtx): Promise<void> {
   const { signal, push } = ctx;
@@ -227,7 +284,10 @@ export async function runRehearsal(ctx: RehearsalCtx): Promise<void> {
     const abs = path.join(ctx.cwd, note);
     const content = '# Tasting menu\n\n1. Look around\n2. One small change\n3. Run the checks\n';
     await useTool('Write', { file_path: abs, content }, `File created successfully at: ${abs} (rehearsal: not really).`, { ms: 450, data: { type: 'create', filePath: abs, structuredPatch: [] } });
-    await useTool('Bash', { command: 'npm test', description: 'Run the checks' }, '> test\n\nAll checks passed.', { ms: 1800 });
+    await say('Now the checks. (In this rehearsal one test fails on purpose, so you can see the error trail.)');
+    await useTool('Bash', { command: 'npm test', description: 'Run the checks' }, 'Exit code 1\n' + fakeTestOutput(ctx.cwd, source), { ms: 1800, isError: true });
+    await useTool('Bash', { command: 'npm run build', description: 'Build the project' }, FAKE_BUILD_OUTPUT, { ms: 1400 });
+    await useTool('Bash', { command: 'git add -A && git commit -m "Add a polish note and tasting menu"', description: 'Commit the change' }, '[main 3f9c2ab] Add a polish note and tasting menu\n 2 files changed, 6 insertions(+), 1 deletion(-)', { ms: 600 });
     await useTool('Bash', { command: `rm ${note}`, description: 'Remove the scratch note again' }, '', { ms: 500 });
   }
 
@@ -239,7 +299,7 @@ export async function runRehearsal(ctx: RehearsalCtx): Promise<void> {
     ],
   }, 'Todos have been modified successfully');
 
-  await say('All three courses are served. That was a **rehearsal**: nothing in your project changed. Switch the mode at the top to *Live* to put the real voice on stage.');
+  await say('All three courses are served. One test failed (on purpose). That was a **rehearsal**: nothing in your project changed. Switch the mode at the top to *Live* to put the real voice on stage.');
 
   push({
     type: 'result',

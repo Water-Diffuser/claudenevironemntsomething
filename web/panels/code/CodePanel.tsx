@@ -34,6 +34,7 @@ function freshness(now: number, ts: number, active: boolean): string {
 export default function CodePanel() {
   const d = useDerived();
   const selected = useUI((s) => s.selectedFile);
+  const jumpTo = useUI((s) => s.jumpTo);
   const themeRev = useThemeRev((s) => s.rev);
   const themeSettings = useSettings((s) => s.ui.theme);
   const dark = useMemo(() => resolveTheme(themeSettings).dark, [themeSettings]);
@@ -47,6 +48,14 @@ export default function CodePanel() {
   useEffect(() => {
     if (selected) setFollow(false);
   }, [selected]);
+  // Jumping to a line (from a stack frame) pins the file; the red highlight clears itself after a few seconds.
+  useEffect(() => {
+    if (!jumpTo) return;
+    setFollow(false);
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    const stop = setTimeout(() => clearInterval(t), 6500);
+    return () => (clearInterval(t), clearTimeout(stop));
+  }, [jumpTo]);
 
   const cursorPath = d.cursor?.path ?? null;
   const path = follow ? cursorPath ?? selected : selected ?? cursorPath;
@@ -144,6 +153,12 @@ export default function CodePanel() {
         },
       });
     }
+    // A line you jumped to from a stack frame: highlighted red for a few seconds.
+    if (jumpTo && jumpTo.path === path && Date.now() - jumpTo.ts < 6000) {
+      const ln = clamp(jumpTo.line);
+      out.push({ range: new monaco.Range(ln, 1, ln, 1), options: { isWholeLine: true, className: 'deco-jump', minimap: { color: colors.bad, position: monaco.editor.MinimapPosition.Gutter } } });
+      editor.revealLineInCenter(ln, monaco.editor.ScrollType.Smooth);
+    }
     coll.set(out);
 
     // Keep the cursor in view (scrolling smoothly, but not on every tiny step).
@@ -156,7 +171,7 @@ export default function CodePanel() {
     }
     // `d.count` changes with every event; `tick` drives the scanning cursor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d.count, d, path, text, tick, themeRev]);
+  }, [d.count, d, path, text, tick, themeRev, jumpTo]);
 
   const lineTotal = text ? text.split('\n').length : 0;
   const lang = path ? languageFor(path) : 'plaintext';

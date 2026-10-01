@@ -550,3 +550,19 @@ html[data-calm='true'] body::after {
 .indulgent-flow .react-flow__controls-button { border-bottom: 1px solid var(--c-border); }
 .indulgent-flow .react-flow__controls-button svg { fill: currentColor; }
 .indulgent-flow .react-flow__minimap { border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; }
+
+/* Error flash on a graph node (red ring that fades). */
+.error-flash {
+  position: absolute; inset: -2px; border-radius: inherit; pointer-events: none;
+  border: 2px solid var(--c-bad);
+  background: color-mix(in srgb, var(--c-bad) 35%, transparent);
+  animation: error-flash 4s ease-out forwards;
+}
+@keyframes error-flash {
+  0% { opacity: 1; box-shadow: 0 0 calc(var(--fx-glow) * 22px) var(--c-bad); }
+  10% { opacity: 0.4; }
+  20% { opacity: 1; }
+  100% { opacity: 0; box-shadow: none; }
+}
+/* A line jumped to from a stack frame (code view). */
+.deco-jump { background: color-mix(in srgb, var(--c-bad) 30%, transparent); box-shadow: inset 3px 0 0 var(--c-bad); }

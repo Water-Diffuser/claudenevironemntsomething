@@ -47,6 +47,7 @@ function GraphInner() {
   const selectFile = useUI((s) => s.selectFile);
   const selectSymbol = useUI((s) => s.selectSymbol);
   const setImpactTarget = useUI((s) => s.setImpactTarget);
+  const uiFlash = useUI((s) => s.uiFlash);
   const rf = useReactFlow();
   const { ref: areaRef, width: areaW, height: areaH } = useElementSize<HTMLDivElement>();
   // (rounded, so tiny resizes don't re-run the layout)
@@ -131,6 +132,18 @@ function GraphInner() {
         for (const [id, depth] of impact.symDepth) impactOf.set(id, depth);
       }
     }
+    // errors: nodes an error pointed at flash red
+    const flashOf = new Map<string, number>();
+    const uf = useUI.getState().uiFlash;
+    for (const f of [...d.flashes.slice(-6), ...(uf ? [uf] : [])]) {
+      if (now - f.ts > 4000) continue;
+      for (const p of f.paths) {
+        if (level === 'files') {
+          const id = model.repOf.get(p);
+          if (id) flashOf.set(id, f.ts);
+        } else for (const n of model.nodes) if (n.path === p) flashOf.set(n.id, f.ts);
+      }
+    }
     const selId = level === 'files' ? (selectedFile ? model.repOf.get(selectedFile) : undefined) : selectedSymbol?.id;
 
     const nodes: GFlowNode[] = model.nodes.map((n) => {
@@ -138,10 +151,11 @@ function GraphInner() {
       const t = touch.get(n.id);
       const imp = impactOf.get(n.id);
       const dimmed = impactOn && impactOf.size > 0 && imp === undefined;
-      const sig = `${t?.kind}|${t?.ts}|${t?.active}|${imp}|${selId === n.id}|${dimmed}|${Math.round(pos.x)}|${Math.round(pos.y)}|${n.label}`;
+      const flashTs = flashOf.get(n.id);
+      const sig = `${t?.kind}|${t?.ts}|${t?.active}|${imp}|${selId === n.id}|${dimmed}|${Math.round(pos.x)}|${Math.round(pos.y)}|${n.label}|${flashTs}`;
       const cached = nodeCache.current.get(n.id);
       if (cached && cached.sig === sig) return cached.node;
-      const data: GNodeData = { node: n, touchKind: t?.kind, touchTs: t?.ts, touchActive: t?.active, impact: impactOn ? imp : undefined, selected: selId === n.id, dimmed, now };
+      const data: GNodeData = { node: n, touchKind: t?.kind, touchTs: t?.ts, touchActive: t?.active, impact: impactOn ? imp : undefined, selected: selId === n.id, dimmed, now, flashTs };
       const node: GFlowNode = { id: n.id, type: 'g', position: { x: pos.x - n.w / 2, y: pos.y - n.h / 2 }, data, width: n.w, height: n.h, draggable: false };
       nodeCache.current.set(n.id, { sig, node });
       return node;
@@ -177,7 +191,7 @@ function GraphInner() {
     return { rfNodes: nodes, rfEdges: [...edges, ...extra.slice(-8)] };
     // d is updated in place; d.count says when something changed
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, positions, d.count, impact, impactOn, selectedFile, selectedSymbol, level]);
+  }, [model, positions, d.count, impact, impactOn, selectedFile, selectedSymbol, level, uiFlash]);
 
   // ---- 4. interactions -----------------------------------------------------------------------------
   const onNodeClick = (_: unknown, n: GFlowNode) => {

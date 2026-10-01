@@ -20,6 +20,7 @@ import { runRehearsal } from './claude/rehearsal';
 import { describeTool, trimInput } from './claude/toolInfo';
 import { runSide } from './claude/side';
 import { ProjectService, type FsChangeKind } from './analysis/project';
+import { GitService } from './git/gitService';
 import { deleteSessionFile, listStoredSessions, loadSession, loadSettings, saveSession, saveSettings } from './store/jsonStore';
 
 interface PendingPermission {
@@ -56,9 +57,17 @@ export class Runtime {
 
   /** Scans the open project and watches it for changes. */
   readonly project = new ProjectService(
-    (msg) => this.broadcast(msg),
+    (msg) => {
+      this.broadcast(msg);
+      // a file was saved/added/removed (not just the background analysis): refresh the working-tree view
+      if (msg.t === 'scan_patch' && msg.patch.progress === undefined) this.git.scheduleRefresh(600);
+    },
     (rel, change) => this.onFsChange(rel, change),
   );
+  /** Reads the project's git history and working-tree changes. */
+  readonly git = new GitService((msg) => this.broadcast(msg));
+  /** Remember each Bash command until its result arrives. */
+  private bashCommands = new Map<string, string>();
   /** Files Claude's own tools touched recently (so the watcher doesn't double-report them). */
   private recentToolPaths = new Map<string, number>();
   private toolPathsById = new Map<string, string[]>();
@@ -83,7 +92,10 @@ export class Runtime {
       busy: false,
       recentProjects: Array.isArray(saved.recentProjects) ? (saved.recentProjects as string[]).filter((p) => fs.existsSync(p)) : [],
     };
-    if (lastProject) void this.project.open(lastProject);
+    if (lastProject) {
+      void this.project.open(lastProject);
+      void this.git.open(lastProject);
+    }
   }
 
   // ---- connections ----------------------------------------------------------
@@ -101,6 +113,7 @@ export class Runtime {
     });
     this.send(ws, { t: 'hello', state: this.state, events: this.events, pending: [...this.pending.values()].map((p) => p.req), sessions: this.sessions });
     if (this.project.scan) this.send(ws, { t: 'scan', scan: this.project.scan });
+    if (this.git.state) this.send(ws, { t: 'git', state: this.git.state });
     void this.refreshSessions();
   }
 
@@ -190,9 +203,26 @@ export class Runtime {
     if (ev.kind === 'tool_start' && (ev.toolKind === 'edit' || ev.toolKind === 'create' || ev.toolKind === 'delete')) for (const p of ev.paths) this.recentToolPaths.set(p, ev.ts);
     if (ev.kind === 'tool_end') for (const p of this.toolPathsById.get(ev.toolId) ?? []) this.recentToolPaths.set(p, ev.ts);
     if (ev.kind === 'tool_start') this.toolPathsById.set(ev.toolId, ev.toolKind === 'edit' || ev.toolKind === 'create' || ev.toolKind === 'delete' ? ev.paths : []);
+    this.afterEvent(ev);
     for (const l of this.eventListeners) l(ev);
     this.schedulePersist();
   };
+
+  /** Side effects of events: keep the git view fresh after commands, and play pretend commits in rehearsal. */
+  private afterEvent(ev: SessionEvent) {
+    if (ev.kind === 'tool_start' && ev.tool === 'Bash' && typeof ev.input.command === 'string') this.bashCommands.set(ev.toolId, ev.input.command);
+    if (ev.kind === 'tool_end') {
+      const cmd = this.bashCommands.get(ev.toolId);
+      this.bashCommands.delete(ev.toolId);
+      if (cmd && /\bgit\b/.test(cmd)) {
+        if (this.state.mode === 'rehearsal' && /git\s+commit/.test(cmd) && ev.ok) {
+          const m = /-m\s+(?:"([^"]*)"|'([^']*)')/.exec(cmd);
+          this.git.addVirtualCommit(m?.[1] ?? m?.[2] ?? 'Rehearsal commit');
+        } else this.git.scheduleRefresh();
+      }
+    }
+    if (ev.kind === 'turn_end') this.git.scheduleRefresh();
+  }
 
   private resetLog(events: SessionEvent[], sessionKey: string | null) {
     this.events = events;
@@ -247,6 +277,7 @@ export class Runtime {
     this.resetLog([], null);
     this.sessionTitle = '';
     void this.project.open(abs);
+    void this.git.open(abs);
     await this.refreshSessions();
   }
 
@@ -303,6 +334,7 @@ export class Runtime {
         this.state.cwd = stored.cwd;
         saveSettings({ lastProject: stored.cwd });
         void this.project.open(stored.cwd);
+        void this.git.open(stored.cwd);
       }
       this.resetLog(stored.events, stored.id);
       return;

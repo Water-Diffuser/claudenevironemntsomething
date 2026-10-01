@@ -11,6 +11,7 @@ import { config } from '@config';
 import type { SessionEvent } from '@shared/events';
 import type { ClientMsg, PermissionRequest, ServerMsg, ServerState, SessionInfo } from '@shared/protocol';
 import { applyEvent, computeDerived, emptyDerived, type Derived } from './derived';
+import { useGit } from './git';
 import { useScan } from './scan';
 import { useSide } from './side';
 
@@ -110,6 +111,9 @@ export const useApp = create<AppStore>((set, get) => ({
         return;
       case 'scan_patch':
         useScan.getState().applyPatch(msg.patch);
+        return;
+      case 'git':
+        useGit.getState().apply(msg.state, !!get().server?.busy);
         return;
       case 'side_delta':
       case 'side_end':

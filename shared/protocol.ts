@@ -4,6 +4,7 @@
 //  Node server. Both sides import these types so they can never disagree.
 // ============================================================================
 import type { Kind, SessionEvent } from './events.ts';
+import type { GitState } from './git.ts';
 import type { ProjectScan, ScanPatch } from './scan.ts';
 
 /** "live" talks to the real Claude Code. "rehearsal" plays a scripted fake session. */
@@ -79,6 +80,8 @@ export type ServerMsg =
   | { t: 'scan'; scan: ProjectScan | null }
   /** Incremental changes to the scan (files saved, analysis finished...). */
   | { t: 'scan_patch'; patch: ScanPatch }
+  /** The project's git repository (null = no project). */
+  | { t: 'git'; state: GitState | null }
   /** Streaming text for a side question. */
   | { t: 'side_delta'; id: string; text?: string; /** clear what was shown so far (Claude is going to use a tool first) */ reset?: boolean; /** a short progress line, e.g. "Reading src/app.ts" */ status?: string }
   | { t: 'side_end'; id: string; ok: boolean; error?: string; costUsd?: number }

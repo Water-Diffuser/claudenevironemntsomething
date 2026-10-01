@@ -21,6 +21,8 @@ export interface GNodeData extends Record<string, unknown> {
   impact?: number;
   selected?: boolean;
   dimmed?: boolean;
+  /** When an error last pointed at this node (it flashes red). */
+  flashTs?: number;
   /** "Now" when this node was rendered (live: wall clock, replay: replay time). */
   now: number;
 }
@@ -45,7 +47,7 @@ function NodeIcon({ node }: { node: GNode }) {
 }
 
 export const GNodeView = memo(function GNodeView({ data }: NodeProps<GFlowNode>) {
-  const { node, touchKind, touchTs, touchActive, impact, selected, dimmed, now } = data;
+  const { node, touchKind, touchTs, touchActive, impact, selected, dimmed, now, flashTs } = data;
   const style: CSSProperties & Record<string, string | number> = { width: node.w, height: node.h };
   if (touchKind) style['--kc'] = `var(--k-${touchKind})`;
   const ago = touchTs ? Math.max(0, now - touchTs) : 0;
@@ -62,6 +64,7 @@ export const GNodeView = memo(function GNodeView({ data }: NodeProps<GFlowNode>)
         </>
       )}
       {impact === 0 && <span className="ripple" />}
+      {flashTs !== undefined && now - flashTs < 4000 && <span className="error-flash" style={{ animationDelay: `-${Math.max(0, now - flashTs)}ms` }} />}
       <div className="relative flex h-full items-center gap-1.5 px-2">
         <NodeIcon node={node} />
         <div className="min-w-0 leading-tight">

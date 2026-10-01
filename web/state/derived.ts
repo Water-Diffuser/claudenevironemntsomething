@@ -6,6 +6,9 @@
 //  the first N events. Later stages add more slices here (map, graph, tests...).
 // ============================================================================
 import type { Kind, SessionEvent, TodoItem } from '@shared/events';
+import { parseCommand, type CommandReport } from '@shared/parse/command';
+import { parseStack, type StackFrame } from '@shared/parse/stack';
+import { isTestCommand, parseTests, type TestCase, type TestRun } from '@shared/parse/tests';
 
 export type ChatItem =
   | { type: 'user'; id: string; text: string; ts: number }
@@ -106,6 +109,46 @@ export interface TrailHop {
   kind: Kind;
 }
 
+/** One shell command Claude ran (tests, builds, installs...). */
+export interface RunRecord {
+  id: string;
+  toolId: string;
+  command: string;
+  description?: string;
+  /** When it started / finished (event time). */
+  startTs: number;
+  ts: number;
+  running: boolean;
+  ok: boolean;
+  durationMs?: number;
+  /** Set when the output was recognized as a test run. */
+  tests?: TestRun;
+  /** Otherwise: a short summary of the output. */
+  report?: CommandReport;
+  /** The full output, for when you click "show output". */
+  output: string;
+  /** Tests from the previous run, shown as "running" cells until this run reports. */
+  expected?: TestCase[];
+}
+
+/** Something that went wrong, with the chain of code locations that led to it. */
+export interface ErrorRecord {
+  id: string;
+  ts: number;
+  source: 'test' | 'command' | 'tool';
+  title: string;
+  message: string;
+  /** Frame 0 is where it failed; later frames are callers. */
+  frames: StackFrame[];
+  runId?: string;
+}
+
+/** A moment when files should flash on the map and graph (because an error pointed at them). */
+export interface Flash {
+  ts: number;
+  paths: string[];
+}
+
 /** What Claude is doing right now (drives the avatar and heartbeat later). */
 export type Phase = 'idle' | 'thinking' | 'working' | 'done' | 'error';
 
@@ -139,6 +182,16 @@ export interface Derived {
   edits: EditRecord[];
   /** The path Claude walked through the files (the graph draws it as a glowing trail). */
   trail: TrailHop[];
+  /** The project folder (from the session start). */
+  cwd: string;
+  /** Shell commands Claude ran, oldest first (capped). */
+  runs: RunRecord[];
+  /** Errors, oldest first (capped). */
+  errors: ErrorRecord[];
+  /** Files to flash because an error pointed at them. */
+  flashes: Flash[];
+  /** The tests seen in the most recent test run (so the next run can show them as "running"). */
+  lastTests: TestCase[];
 }
 
 export function emptyDerived(): Derived {
@@ -160,6 +213,11 @@ export function emptyDerived(): Derived {
     cursor: null,
     edits: [],
     trail: [],
+    cwd: '',
+    runs: [],
+    errors: [],
+    flashes: [],
+    lastTests: [],
   };
 }
 
@@ -238,6 +296,7 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
     case 'session_start':
       d.sessionId = e.sessionId;
       d.model = e.model;
+      d.cwd = e.cwd;
       break;
     case 'user_message':
       d.chat.push({ type: 'user', id, text: e.text, ts: e.ts });
@@ -274,6 +333,22 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
       d.running.set(e.toolId, e.toolKind);
       const written = typeof e.input.content === 'string' ? e.input.content.split('\n').length : undefined;
       for (const p of e.paths) touch(d, p, e.toolKind, e.ts, true, { tool: e.tool, toolId: e.toolId, lines: e.toolKind === 'create' ? written : undefined });
+      // A shell command: start tracking it as a "run" (tests, build...).
+      if (e.tool === 'Bash' && typeof e.input.command === 'string') {
+        d.runs.push({
+          id: `run-${e.toolId}`,
+          toolId: e.toolId,
+          command: e.input.command,
+          description: typeof e.input.description === 'string' ? e.input.description : undefined,
+          startTs: e.ts,
+          ts: e.ts,
+          running: true,
+          ok: true,
+          output: '',
+          expected: isTestCommand(e.input.command) && d.lastTests.length ? d.lastTests.map((t) => ({ ...t, status: 'running' as const, error: undefined })) : undefined,
+        });
+        if (d.runs.length > 60) d.runs.shift();
+      }
       // Record the hop from the previous file to this one (the graph shows Claude's path).
       if (e.paths[0] && e.toolKind !== 'search' && e.toolKind !== 'run' && e.toolKind !== 'other') {
         const last = d.trail[d.trail.length - 1];
@@ -318,6 +393,7 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
         const t = d.touched.get(p);
         if (t) (t.active = false), (t.ts = e.ts);
       }
+      if (item?.type === 'tool') finishRun(d, item, e);
       // Replace the provisional region with the real one, and record edits for the diff view.
       if (item?.type === 'tool') finishRegions(d, item, e);
       // Files a search found (Grep/Glob results) light up as SEARCHED.
@@ -351,6 +427,54 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
       d.live = null;
       d.phase = 'idle';
       break;
+  }
+}
+
+const MAX_ERRORS = 80;
+
+function addError(d: Derived, err: ErrorRecord) {
+  d.errors.push(err);
+  if (d.errors.length > MAX_ERRORS) d.errors.shift();
+  // The project files in the chain flash on the map and graph.
+  const paths = [...new Set(err.frames.filter((f) => !f.external).map((f) => f.file))];
+  if (paths.length) {
+    d.flashes.push({ ts: err.ts, paths });
+    if (d.flashes.length > 40) d.flashes.shift();
+  }
+}
+
+/** A tool call finished: if it was a shell command, understand its output (tests? build? errors?). */
+function finishRun(d: Derived, item: Extract<ChatItem, { type: 'tool' }>, e: Extract<SessionEvent, { kind: 'tool_end' }>) {
+  const run = d.runs.find((r) => r.toolId === e.toolId);
+  if (item.tool === 'Bash' && run) {
+    run.running = false;
+    run.ts = e.ts;
+    run.durationMs = e.durationMs;
+    run.output = e.output;
+    run.expected = undefined;
+    const tests = isTestCommand(run.command) ? parseTests(e.output, d.cwd) : null;
+    if (tests) {
+      run.tests = tests;
+      run.ok = e.ok && tests.failed === 0;
+      d.lastTests = tests.cases.map((c) => ({ ...c, error: undefined }));
+      for (const c of tests.cases.filter((x) => x.status === 'fail').slice(0, 20)) {
+        addError(d, { id: `err-${run.id}-${c.id}`, ts: e.ts, source: 'test', title: c.suite ? `${c.suite} › ${c.name}` : c.name, message: c.error?.message ?? 'test failed', frames: c.error?.frames ?? [], runId: run.id });
+      }
+    } else {
+      run.ok = e.ok;
+      run.report = parseCommand(run.command, e.output, e.ok, d.cwd);
+      if (!e.ok || run.report.problems.some((p) => p.severity === 'error')) {
+        const stack = parseStack(e.output, d.cwd);
+        const fromProblems: StackFrame[] = run.report.problems.filter((p) => p.severity === 'error').slice(0, 12).map((p) => ({ raw: `${p.file}:${p.line}`, file: p.file, line: p.line, col: p.col, fn: p.code, external: false }));
+        const frames = stack.length ? stack : fromProblems;
+        if (!e.ok || frames.length) addError(d, { id: `err-${run.id}`, ts: e.ts, source: 'command', title: run.command.split('\n')[0].slice(0, 80), message: run.report.highlights[0] ?? 'command failed', frames, runId: run.id });
+      }
+    }
+    return;
+  }
+  // Some other tool failed (e.g. reading a file that doesn't exist).
+  if (!e.ok && item.status !== 'denied') {
+    addError(d, { id: `err-${e.toolId}`, ts: e.ts, source: 'tool', title: `${item.tool} ${item.summary}`.slice(0, 80), message: e.output.split('\n')[0].slice(0, 200), frames: item.paths[0] ? [{ raw: item.paths[0], file: item.paths[0], line: 1, external: false }] : [] });
   }
 }
 

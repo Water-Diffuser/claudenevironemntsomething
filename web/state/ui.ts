@@ -11,6 +11,12 @@ interface UIState {
   /** A function/class you clicked in the graph (null = just the file). */
   selectedSymbol: SymRef | null;
   selectSymbol: (sym: SymRef | null) => void;
+  /** "Go to this line" requests (from clicking a stack frame). The code view listens. */
+  jumpTo: { path: string; line: number; ts: number } | null;
+  jump: (path: string, line: number) => void;
+  /** Files to flash on the map and graph right now (from clicking a stack frame). */
+  uiFlash: { paths: string[]; ts: number } | null;
+  flash: (paths: string[]) => void;
   /** What the impact view is about. null = follow Claude's latest edit. */
   impactTarget: { path: string; symbolIds: string[] } | null;
   setImpactTarget: (t: { path: string; symbolIds: string[] } | null) => void;
@@ -24,6 +30,10 @@ export const useUI = create<UIState>((set) => ({
   selectFile: (selectedFile) => set((s) => ({ selectedFile, selectedSymbol: selectedFile === s.selectedFile ? s.selectedSymbol : null })),
   selectedSymbol: null,
   selectSymbol: (selectedSymbol) => set({ selectedSymbol, selectedFile: selectedSymbol ? selectedSymbol.path : null }),
+  jumpTo: null,
+  jump: (path, line) => set({ jumpTo: { path, line, ts: Date.now() }, selectedFile: path }),
+  uiFlash: null,
+  flash: (paths) => set({ uiFlash: { paths, ts: Date.now() } }),
   impactTarget: null,
   setImpactTarget: (impactTarget) => set({ impactTarget }),
 }));

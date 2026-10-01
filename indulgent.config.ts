@@ -320,6 +320,16 @@ const layouts: Record<string, NamedLayout> = {
       { i: 'code', x: 7, y: 12, w: 17, h: 12 },
     ],
   },
+  'test-kitchen': {
+    label: 'Test Kitchen',
+    items: [
+      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
+      { i: 'tests', x: 6, y: 0, w: 9, h: 14 },
+      { i: 'trails', x: 15, y: 0, w: 9, h: 14 },
+      { i: 'map', x: 6, y: 14, w: 9, h: 10 },
+      { i: 'git', x: 15, y: 14, w: 9, h: 10 },
+    ],
+  },
   inspector: {
     label: 'Inspector',
     items: [
@@ -348,6 +358,9 @@ const features: Record<string, boolean> = {
   impact: true,
   explain: true,
   sketch: true,
+  tests: true,
+  trails: true,
+  git: true,
 };
 
 // ---- performance caps -------------------------------------------------------

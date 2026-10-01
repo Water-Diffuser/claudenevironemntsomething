@@ -29,7 +29,11 @@ export interface DrawOpts {
   calm: boolean;
   /** Is a shell command running right now? (the map border shimmers in the RAN color) */
   commandRunning: boolean;
+  /** Files an error pointed at: they flash red for a few seconds. */
+  flashes: Array<{ ts: number; paths: string[] }>;
 }
+
+const FLASH_MS = 3500;
 
 type Category = 'code' | 'doc' | 'config' | 'style' | 'test' | 'other';
 
@@ -220,6 +224,35 @@ export function drawMap(o: DrawOpts): number | null {
   }
   ctx.restore();
 
+  // Error flashes: files named in a stack trace blink red (so you see WHERE it went wrong).
+  let flashing = false;
+  for (const f of o.flashes) {
+    const age = now - f.ts;
+    if (age < 0 || age > FLASH_MS) continue;
+    const k = 1 - age / FLASH_MS;
+    for (const p of f.paths) {
+      const cell = layout.byPath.get(p);
+      if (!cell) continue;
+      flashing = true;
+      const x = cell.x0;
+      const y = cell.y0;
+      const w = cell.x1 - cell.x0;
+      const h = cell.y1 - cell.y0;
+      ctx.save();
+      ctx.globalAlpha = (o.calm ? 0.6 : 0.35 + 0.35 * Math.sin(age / 90)) * k + 0.15 * k;
+      ctx.fillStyle = c.bad;
+      roundedRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, corner);
+      ctx.fill();
+      ctx.globalAlpha = Math.min(1, k + 0.2);
+      ctx.strokeStyle = c.bad;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = c.bad;
+      ctx.shadowBlur = o.calm ? 0 : 16 * k;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   // A command is running: it touches no particular file, so the whole map gets a yellow rim.
   if (o.commandRunning) {
     ctx.save();
@@ -243,7 +276,7 @@ export function drawMap(o: DrawOpts): number | null {
   if (o.selected) outline(layout.byPath.get(o.selected) ?? null, c.accent2, 2.4);
   if (o.hover && o.hover.node.path !== o.selected) outline(o.hover, c.text, 1.4);
 
-  return o.commandRunning ? 0 : nextRedrawDelay(touched, now);
+  return o.commandRunning || flashing ? 0 : nextRedrawDelay(touched, now);
 }
 
 /** The deepest cell under the point (x, y), or null. Cells are stored shallow-to-deep, so search backwards. */

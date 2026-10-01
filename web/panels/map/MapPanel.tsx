@@ -102,6 +102,12 @@ export function MapPanel() {
   const raf = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lastFrame = useRef(0);
+  const uiFlash = useUI((s) => s.uiFlash);
+  const uiFlashRef = useRef<{ ts: number; paths: string[] } | null>(null);
+  useEffect(() => {
+    uiFlashRef.current = uiFlash;
+    requestDraw();
+  }, [uiFlash]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- 3. the redraw loop -----------------------------------------------------------
   const frame = useCallback(() => {
@@ -128,6 +134,7 @@ export function MapPanel() {
         dimUntouched: dimRef.current,
         calm: calmRef.current,
         commandRunning: [...view.derived.running.values()].includes('run'),
+        flashes: uiFlashRef.current ? [...view.derived.flashes.slice(-6), uiFlashRef.current] : view.derived.flashes.slice(-6),
       });
 
     let delay: number | null = null;
