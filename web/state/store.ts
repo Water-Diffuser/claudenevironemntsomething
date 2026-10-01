@@ -77,6 +77,8 @@ export const useApp = create<AppStore>((set, get) => ({
         set({ server: msg.state, events: msg.events, derived: computeDerived(msg.events), pending: msg.pending, sessions: msg.sessions, rev: get().rev + 1 });
         return;
       case 'events_reset':
+        // (a different session: any replay of the old one no longer makes sense)
+        useView.setState({ replay: null });
         set({ events: msg.events, derived: computeDerived(msg.events), rev: get().rev + 1 });
         return;
       case 'event': {
@@ -134,6 +136,9 @@ interface ViewStore {
 }
 export const useView = create<ViewStore>(() => ({ replay: null }));
 
+/** The replay "clock" (a time in the session's own timeline). Canvas panels read it every frame, so it isn't React state. */
+export const replayClock = { now: 0 };
+
 /** What panels should show: the live state, or the replayed moment. (For React components.) */
 export function useDerived(): Derived {
   useApp((s) => s.rev);
@@ -144,7 +149,7 @@ export function useDerived(): Derived {
 /** Same thing for non-React code (canvas loops): the view data and the "clock" to fade glows against. */
 export function getView(): { derived: Derived; now: number; replaying: boolean } {
   const r = useView.getState().replay;
-  return { derived: r?.derived ?? useApp.getState().derived, now: r?.now ?? Date.now(), replaying: !!r };
+  return { derived: r?.derived ?? useApp.getState().derived, now: r ? replayClock.now : Date.now(), replaying: !!r };
 }
 
 /** Call `fn` whenever the live data or the replay position changes. Returns an unsubscribe function. */

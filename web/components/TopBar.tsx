@@ -2,7 +2,8 @@
 import { FolderOpen, PanelLeft, Radio, Theater } from 'lucide-react';
 import { config } from '@config';
 import type { Mode, PermissionModeName } from '@shared/protocol';
-import { send, useApp } from '../state/store';
+import { send, useApp, useView } from '../state/store';
+import { goLive } from '../state/replay';
 import { useLabel, useSettings } from '../state/settings';
 import { useUI } from '../state/ui';
 
@@ -20,6 +21,7 @@ export function TopBar() {
   const update = useSettings((s) => s.update);
   const project = useLabel('project');
   const busy = !!server?.busy;
+  const replaying = useView((s) => !!s.replay);
   const name = server?.cwd?.split('/').filter(Boolean).pop();
 
   const modeBtn = (mode: Mode, Icon: typeof Radio, title: string) => (
@@ -67,6 +69,11 @@ export function TopBar() {
           {modeBtn('live', Radio, server?.liveAvailable ? 'Real Claude Code' : 'Real Claude (no credentials found yet)')}
           {modeBtn('rehearsal', Theater, 'Scripted fake session: free, touches nothing')}
         </div>
+        {replaying && (
+          <button className="btn btn-primary !px-2.5 !py-1 text-xs" onClick={goLive} title="You are looking at the past. Click to return to now.">
+            ⏪ REPLAY · back to live
+          </button>
+        )}
         <span className="flex items-center gap-1.5 text-xs text-dim" title={`backend: ${conn}`}>
           <span className={`inline-block size-2 rounded-full ${conn === 'open' ? 'bg-good' : conn === 'connecting' ? 'animate-pulse bg-warn' : 'bg-bad'}`} />
           {conn === 'open' ? (busy ? 'working' : 'ready') : conn}

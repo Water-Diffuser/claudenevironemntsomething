@@ -19,7 +19,7 @@ import { readThemeColors } from '../../lib/themeColors';
 import { useCodeGraph, useImpact } from '../../lib/useImpact';
 import { useScan } from '../../state/scan';
 import { askExplain } from '../../state/side';
-import { getView, send, useDerived } from '../../state/store';
+import { getView, send, useApp, useDerived, useView } from '../../state/store';
 import { useUI } from '../../state/ui';
 import { useThemeRev } from '../../theme/themeRev';
 import { layoutGraph, type Positions } from './layout';
@@ -72,11 +72,22 @@ function GraphInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [touchedKey, selectedFile]);
 
+  // While replaying: files created later in the session don't exist yet.
+  const replayIndex = useView((s) => s.replay?.index ?? -1);
+  const hiddenFiles = useMemo(() => {
+    const v = getView();
+    if (!v.replaying) return null;
+    const out = new Set<string>();
+    for (const p of useApp.getState().derived.created) if (!v.derived.created.has(p)) out.add(p);
+    return out.size ? out : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replayIndex]);
+
   // ---- 1. the model (which nodes and edges) --------------------------------------------------
   const model: GraphModel & { scopeFiles?: number } = useMemo(() => {
-    if (level === 'files') return buildFileGraph(cg, files, { expanded, touched: touchedPaths });
+    if (level === 'files') return buildFileGraph(cg, files, { expanded, touched: touchedPaths, hidden: hiddenFiles });
     return buildFnGraph(cg, functionScope(cg, files, seeds, hops), touchedPaths);
-  }, [cg, files, level, expanded, hops, touchedPaths, seeds]);
+  }, [cg, files, level, expanded, hops, touchedPaths, seeds, hiddenFiles]);
 
   // ---- 2. positions (remembered between updates) -----------------------------------------------
   const prevPositions = useRef<Positions>(new Map());

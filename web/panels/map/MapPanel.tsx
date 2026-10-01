@@ -17,9 +17,10 @@ import { timeAgo } from '../../lib/format';
 import { readThemeColors, type ThemeColors } from '../../lib/themeColors';
 import { useDebounced } from '../../lib/useDebounced';
 import { useElementSize } from '../../lib/useElementSize';
+import { useReplay } from '../../state/replay';
 import { useScan } from '../../state/scan';
 import { useLabel, useSettings } from '../../state/settings';
-import { getView, subscribeView, useApp, useDerived } from '../../state/store';
+import { getView, subscribeView, useApp, useDerived, useView } from '../../state/store';
 import { useUI } from '../../state/ui';
 import { dur } from '../../theme/motion';
 import { useThemeRev } from '../../theme/themeRev';
@@ -70,12 +71,22 @@ export function MapPanel() {
 
   // ---- 1. data -> layout ----------------------------------------------------------
   const knownLines = useRef(new Map<string, number>());
+  // While replaying: files Claude created LATER in the session don't exist yet, so leave them out.
+  const replayIndex = useView((s) => s.replay?.index ?? -1);
+  const hidden = useMemo(() => {
+    const v = getView();
+    if (!v.replaying) return null;
+    const out = new Set<string>();
+    for (const p of useApp.getState().derived.created) if (!v.derived.created.has(p)) out.add(p);
+    return out.size ? out : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replayIndex]);
   const tree: TNode = useMemo(() => {
     knownLines.current = new Map([...files.values()].map((f) => [f.path, f.lines]));
-    return buildTree(files.values(), ghosts, scanName);
+    return buildTree(hidden ? [...files.values()].filter((f) => !hidden.has(f.path)) : files.values(), ghosts, scanName);
     // `files` is mutated in place, so we watch layoutVersion instead
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutVersion, ghosts, scanName]);
+  }, [layoutVersion, ghosts, scanName, hidden]);
 
   const focusNode = useMemo(() => findNode(tree, focus) ?? tree, [tree, focus]);
   const pack: LayoutPack | null = useMemo(() => {
@@ -195,6 +206,7 @@ export function MapPanel() {
 
     lastFrame.current = performance.now();
     clearTimeout(timer.current);
+    if (view.replaying && useReplay.getState().playing) delay = 0; // keep fading while a replay plays
     if (delay === 0) timer.current = setTimeout(() => requestDraw(), Math.max(0, 33 - (performance.now() - lastFrame.current)));
     else if (delay !== null) timer.current = setTimeout(() => requestDraw(), delay);
     // eslint-disable-next-line react-hooks/exhaustive-deps

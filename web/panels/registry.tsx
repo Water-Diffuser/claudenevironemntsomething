@@ -3,7 +3,7 @@
 //  To add a panel: build a component, then add ONE line here, one entry in
 //  config.labels / config.features, and a position in config.layouts.
 // ============================================================================
-import { BookMarked, Code2, Flame, FlaskConical, GitCompare, Map as MapIcon, Mic2, Network, NotebookPen, Radar, Ruler, type LucideIcon } from 'lucide-react';
+import { BookMarked, Clapperboard, Code2, Flame, FlaskConical, GitCompare, Map as MapIcon, Mic2, Network, NotebookPen, Radar, Ruler, type LucideIcon } from 'lucide-react';
 import { lazy, type ComponentType } from 'react';
 import type { LabelKey } from '../state/settings';
 import { BoothPanel } from './booth/BoothPanel';
@@ -19,6 +19,7 @@ const SketchPanel = lazy(() => import('./sketch/SketchPanel'));
 const TestsPanel = lazy(() => import('./tests/TestsPanel'));
 const TrailsPanel = lazy(() => import('./trails/TrailsPanel'));
 const GitPanel = lazy(() => import('./git/GitPanel'));
+const ReplayPanel = lazy(() => import('./replay/ReplayPanel'));
 
 export interface PanelDef {
   /** Unique id, also used in config.layouts and config.features. */
@@ -43,6 +44,7 @@ export const PANELS: PanelDef[] = [
   { id: 'tests', label: 'tests', icon: FlaskConical, component: TestsPanel, minW: 5, minH: 5 },
   { id: 'trails', label: 'trails', icon: Flame, component: TrailsPanel, minW: 4, minH: 5 },
   { id: 'git', label: 'git', icon: BookMarked, component: GitPanel, minW: 5, minH: 5 },
+  { id: 'replay', label: 'replay', icon: Clapperboard, component: ReplayPanel, minW: 6, minH: 3 },
 ];
 
 export const panelById = (id: string) => PANELS.find((p) => p.id === id);

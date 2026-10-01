@@ -95,6 +95,16 @@ export class Runtime {
     if (lastProject) {
       void this.project.open(lastProject);
       void this.git.open(lastProject);
+      // Re-open the session you were in (so a restart or a crash doesn't lose your place).
+      const last = typeof saved.lastSession === 'string' ? loadSession(saved.lastSession) : null;
+      if (last && last.cwd === lastProject) {
+        this.events = last.events;
+        this.sessionKey = last.id;
+        this.state.sessionId = last.id;
+        this.sessionTitle = last.title;
+        this.createdAt = last.createdAt;
+        this.sessionIsRehearsal = last.rehearsal;
+      }
     }
   }
 
@@ -226,6 +236,7 @@ export class Runtime {
 
   private resetLog(events: SessionEvent[], sessionKey: string | null) {
     this.events = events;
+    saveSettings({ lastSession: sessionKey });
     this.sessionKey = sessionKey;
     this.state.sessionId = sessionKey;
     this.broadcast({ t: 'events_reset', events, sessionId: sessionKey });
@@ -246,6 +257,7 @@ export class Runtime {
     if (this.persistTimer) clearTimeout(this.persistTimer);
     this.persistTimer = null;
     if (!this.sessionKey || !this.state.cwd || this.events.length === 0) return;
+    saveSettings({ lastSession: this.sessionKey });
     saveSession({
       id: this.sessionKey,
       title: this.sessionTitle || 'Untitled take',

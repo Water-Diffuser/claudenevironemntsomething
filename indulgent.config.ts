@@ -298,46 +298,51 @@ const layouts: Record<string, NamedLayout> = {
     label: 'Control Room',
     items: [
       { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'map', x: 6, y: 0, w: 9, h: 12 },
-      { i: 'graph', x: 15, y: 0, w: 9, h: 12 },
-      { i: 'code', x: 6, y: 12, w: 9, h: 12 },
-      { i: 'diff', x: 15, y: 12, w: 9, h: 12 },
+      { i: 'map', x: 6, y: 0, w: 9, h: 10 },
+      { i: 'graph', x: 15, y: 0, w: 9, h: 10 },
+      { i: 'code', x: 6, y: 10, w: 9, h: 10 },
+      { i: 'diff', x: 15, y: 10, w: 9, h: 10 },
+      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
     ],
   },
   'map-room': {
     label: 'Map Room',
     items: [
       { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'map', x: 6, y: 0, w: 9, h: 24 },
-      { i: 'graph', x: 15, y: 0, w: 9, h: 24 },
+      { i: 'map', x: 6, y: 0, w: 9, h: 20 },
+      { i: 'graph', x: 15, y: 0, w: 9, h: 20 },
+      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
     ],
   },
   studio: {
     label: 'Studio',
     items: [
       { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
-      { i: 'diff', x: 7, y: 0, w: 17, h: 12 },
-      { i: 'code', x: 7, y: 12, w: 17, h: 12 },
+      { i: 'diff', x: 7, y: 0, w: 17, h: 10 },
+      { i: 'code', x: 7, y: 10, w: 17, h: 10 },
+      { i: 'replay', x: 7, y: 20, w: 17, h: 4 },
     ],
   },
   'test-kitchen': {
     label: 'Test Kitchen',
     items: [
       { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'tests', x: 6, y: 0, w: 9, h: 14 },
-      { i: 'trails', x: 15, y: 0, w: 9, h: 14 },
-      { i: 'map', x: 6, y: 14, w: 9, h: 10 },
-      { i: 'git', x: 15, y: 14, w: 9, h: 10 },
+      { i: 'tests', x: 6, y: 0, w: 9, h: 12 },
+      { i: 'trails', x: 15, y: 0, w: 9, h: 12 },
+      { i: 'map', x: 6, y: 12, w: 9, h: 8 },
+      { i: 'git', x: 15, y: 12, w: 9, h: 8 },
+      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
     ],
   },
   inspector: {
     label: 'Inspector',
     items: [
       { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'graph', x: 6, y: 0, w: 10, h: 14 },
-      { i: 'impact', x: 16, y: 0, w: 8, h: 14 },
-      { i: 'explain', x: 6, y: 14, w: 9, h: 10 },
-      { i: 'sketch', x: 15, y: 14, w: 9, h: 10 },
+      { i: 'graph', x: 6, y: 0, w: 10, h: 12 },
+      { i: 'impact', x: 16, y: 0, w: 8, h: 12 },
+      { i: 'explain', x: 6, y: 12, w: 9, h: 8 },
+      { i: 'sketch', x: 15, y: 12, w: 9, h: 8 },
+      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
     ],
   },
   focus: {
@@ -361,6 +366,7 @@ const features: Record<string, boolean> = {
   tests: true,
   trails: true,
   git: true,
+  replay: true,
 };
 
 // ---- performance caps -------------------------------------------------------

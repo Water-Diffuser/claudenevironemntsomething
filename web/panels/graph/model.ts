@@ -59,7 +59,7 @@ interface Dir {
   dirs: Map<string, Dir>;
 }
 
-export function buildFileGraph(g: CodeGraph, files: Map<string, FileInfo>, opts: { expanded: Set<string>; touched: Set<string> }): GraphModel {
+export function buildFileGraph(g: CodeGraph, files: Map<string, FileInfo>, opts: { expanded: Set<string>; touched: Set<string>; hidden?: Set<string> | null }): GraphModel {
   // Which files take part? Any file with an import edge, plus anything Claude touched.
   // Small projects show every code file, even unconnected ones.
   const connected = new Set<string>();
@@ -71,6 +71,7 @@ export function buildFileGraph(g: CodeGraph, files: Map<string, FileInfo>, opts:
   const showAll = codeFiles.length <= 60;
   const included: string[] = [];
   for (const f of files.values()) {
+    if (opts.hidden?.has(f.path)) continue; // (replay: this file doesn't exist yet at the chosen moment)
     if (connected.has(f.path) || opts.touched.has(f.path) || (showAll && f.lang)) included.push(f.path);
   }
   const hidden = codeFiles.length - codeFiles.filter((f) => included.includes(f.path)).length;

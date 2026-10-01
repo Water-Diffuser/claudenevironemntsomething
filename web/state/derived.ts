@@ -190,6 +190,8 @@ export interface Derived {
   errors: ErrorRecord[];
   /** Files to flash because an error pointed at them. */
   flashes: Flash[];
+  /** Files created during the session so far (replay hides the ones that don't exist yet at the chosen moment). */
+  created: Set<string>;
   /** The tests seen in the most recent test run (so the next run can show them as "running"). */
   lastTests: TestCase[];
 }
@@ -217,6 +219,7 @@ export function emptyDerived(): Derived {
     runs: [],
     errors: [],
     flashes: [],
+    created: new Set(),
     lastTests: [],
   };
 }
@@ -367,6 +370,7 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
     }
     case 'fs_change': {
       const kind: Kind = e.change === 'add' ? 'create' : e.change === 'unlink' ? 'delete' : 'edit';
+      if (e.change === 'add') d.created.add(e.path);
       touch(d, e.path, kind, e.ts, false, { tool: 'shell', toolId: id });
       break;
     }
@@ -394,6 +398,7 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
         if (t) (t.active = false), (t.ts = e.ts);
       }
       if (item?.type === 'tool') finishRun(d, item, e);
+      if (item?.type === 'tool' && item.toolKind === 'create' && e.ok && item.paths[0]) d.created.add(item.paths[0]);
       // Replace the provisional region with the real one, and record edits for the diff view.
       if (item?.type === 'tool') finishRegions(d, item, e);
       // Files a search found (Grep/Glob results) light up as SEARCHED.

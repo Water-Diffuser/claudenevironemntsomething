@@ -1,7 +1,7 @@
 // The message box at the bottom of The Booth. Enter = send, Shift+Enter = new line.
 import { useEffect, useRef, useState } from 'react';
 import { Send, Square } from 'lucide-react';
-import { send, useApp } from '../../state/store';
+import { send, useApp, useView } from '../../state/store';
 import { useLabel } from '../../state/settings';
 
 const STARTERS = ['Give me a tour of this codebase', 'Find the riskiest file and explain why', 'Which parts have no tests?', 'Suggest one small improvement and do it'];
@@ -13,7 +13,8 @@ export function Composer({ showStarters }: { showStarters: boolean }) {
   const conn = useApp((s) => s.conn);
   const producer = useLabel('producer');
   const busy = !!server?.busy;
-  const ready = conn === 'open' && !!server?.cwd;
+  const replaying = useView((s) => !!s.replay);
+  const ready = conn === 'open' && !!server?.cwd && !replaying;
 
   // Grow the box as you type (up to a limit).
   useEffect(() => {
@@ -47,7 +48,7 @@ export function Composer({ showStarters }: { showStarters: boolean }) {
           className="field resize-none"
           value={text}
           disabled={!ready}
-          placeholder={ready ? `${producer}, what should we make? (Enter to send)` : 'Pick a project folder first…'}
+          placeholder={replaying ? 'Replaying the past. Press Live (in Playback) to chat again.' : ready ? `${producer}, what should we make? (Enter to send)` : 'Pick a project folder first…'}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
