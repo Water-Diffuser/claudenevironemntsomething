@@ -292,15 +292,26 @@ const layouts: Record<string, NamedLayout> = {
   'control-room': {
     label: 'Control Room',
     items: [
-      { i: 'booth', x: 0, y: 0, w: 9, h: 24 },
-      { i: 'map', x: 9, y: 0, w: 15, h: 24 },
+      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
+      { i: 'map', x: 7, y: 0, w: 10, h: 14 },
+      { i: 'code', x: 17, y: 0, w: 7, h: 14 },
+      { i: 'diff', x: 7, y: 14, w: 17, h: 10 },
     ],
   },
   'map-room': {
     label: 'Map Room',
     items: [
       { i: 'map', x: 0, y: 0, w: 16, h: 24 },
-      { i: 'booth', x: 16, y: 0, w: 8, h: 24 },
+      { i: 'booth', x: 16, y: 0, w: 8, h: 12 },
+      { i: 'code', x: 16, y: 12, w: 8, h: 12 },
+    ],
+  },
+  studio: {
+    label: 'Studio',
+    items: [
+      { i: 'booth', x: 0, y: 0, w: 8, h: 24 },
+      { i: 'diff', x: 8, y: 0, w: 16, h: 12 },
+      { i: 'code', x: 8, y: 12, w: 16, h: 12 },
     ],
   },
   focus: {
@@ -315,6 +326,8 @@ const defaultLayout = 'control-room';
 const features: Record<string, boolean> = {
   booth: true,
   map: true,
+  code: true,
+  diff: true,
 };
 
 // ---- performance caps -------------------------------------------------------

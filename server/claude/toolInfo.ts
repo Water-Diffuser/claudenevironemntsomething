@@ -175,3 +175,34 @@ export function pathsFromOutput(tool: string, output: string, cwd: string): stri
   }
   return [...found];
 }
+
+/**
+ * Where in the file does this tool call work? Done BEFORE the tool runs, so for an Edit we can
+ * find the text it is about to replace. Returns 1-based line numbers.
+ */
+export function locateInFile(tool: string, input: Record<string, unknown>, cwd: string): { startLine: number; endLine?: number } | undefined {
+  try {
+    if (tool === 'Read') {
+      const startLine = typeof input.offset === 'number' ? Math.max(1, input.offset) : 1;
+      return { startLine, endLine: typeof input.limit === 'number' ? startLine + input.limit - 1 : undefined };
+    }
+    if (tool === 'Write') {
+      const content = str(input.content);
+      return { startLine: 1, endLine: content ? content.split('\n').length : 1 };
+    }
+    if (tool === 'Edit' || tool === 'MultiEdit') {
+      const file = path.resolve(cwd, str(input.file_path));
+      const edits = tool === 'MultiEdit' && Array.isArray(input.edits) ? (input.edits as Array<Record<string, unknown>>) : [input];
+      const old = str(edits[0]?.old_string);
+      if (!old || !fs.existsSync(file) || fs.statSync(file).size > 2_000_000) return undefined;
+      const text = fs.readFileSync(file, 'utf8');
+      const idx = text.indexOf(old);
+      if (idx < 0) return undefined;
+      const startLine = text.slice(0, idx).split('\n').length;
+      return { startLine, endLine: startLine + old.split('\n').length - 1 };
+    }
+  } catch {
+    /* the file may be unreadable; no location is fine */
+  }
+  return undefined;
+}

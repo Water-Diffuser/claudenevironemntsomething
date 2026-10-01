@@ -88,7 +88,7 @@ function pickEditLine(cwd: string, files: string[]) {
     const i = lines.findIndex((l, idx) => idx > 2 && l.trim().length > 12 && !/^\s*(\/\/|#|\*|\/\*)/.test(l) && text.indexOf(l) === text.lastIndexOf(l));
     if (i >= 0) {
       const comment = path.extname(f) === '.py' ? '#' : '//';
-      return { file: f, oldLine: lines[i], newLine: `${lines[i]}  ${comment} polished` };
+      return { file: f, oldLine: lines[i], newLine: `${lines[i]}  ${comment} polished`, lineNo: i + 1, before: lines.slice(Math.max(0, i - 3), i), after: lines.slice(i + 1, i + 4) };
     }
   }
   return null;
@@ -203,7 +203,20 @@ export async function runRehearsal(ctx: RehearsalCtx): Promise<void> {
     const abs = path.join(ctx.cwd, edit.file);
     await useTool('Edit', { file_path: abs, old_string: edit.oldLine, new_string: edit.newLine }, `The file ${abs} has been updated (rehearsal: not really).`, {
       ms: 500,
-      data: { filePath: abs, type: 'update', structuredPatch: [{ oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, lines: [`-${edit.oldLine}`, `+${edit.newLine}`] }] },
+      data: {
+        filePath: abs,
+        type: 'update',
+        // A real unified-diff hunk (3 lines of context each side), like the real Edit tool returns.
+        structuredPatch: [
+          {
+            oldStart: edit.lineNo - edit.before.length,
+            oldLines: edit.before.length + 1 + edit.after.length,
+            newStart: edit.lineNo - edit.before.length,
+            newLines: edit.before.length + 1 + edit.after.length,
+            lines: [...edit.before.map((l) => ` ${l}`), `-${edit.oldLine}`, `+${edit.newLine}`, ...edit.after.map((l) => ` ${l}`)],
+          },
+        ],
+      },
     });
   }
 

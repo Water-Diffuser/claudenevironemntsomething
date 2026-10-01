@@ -86,6 +86,30 @@ app.get('/api/fs/list', (req, res) => {
   res.json(listing);
 });
 
+// ---- read one project file (for the code view) ---------------------------------
+const MAX_VIEW_BYTES = 2_000_000;
+app.get('/api/file', (req, res) => {
+  const cwd = runtime.state.cwd;
+  const rel = typeof req.query.path === 'string' ? req.query.path : '';
+  if (!cwd || !rel) return void res.status(400).json({ error: 'no project or path' });
+  const abs = path.resolve(cwd, rel);
+  // Only files inside the open project (blocks "../../etc/passwd" style paths).
+  if (abs !== cwd && !abs.startsWith(cwd + path.sep)) return void res.status(403).json({ error: 'outside the project' });
+  try {
+    const st = fs.statSync(abs);
+    if (!st.isFile()) return void res.json({ missing: true });
+    const fd = fs.openSync(abs, 'r');
+    const buf = Buffer.alloc(Math.min(st.size, MAX_VIEW_BYTES));
+    fs.readSync(fd, buf, 0, buf.length, 0);
+    fs.closeSync(fd);
+    if (buf.subarray(0, 8000).includes(0)) return void res.json({ binary: true });
+    res.json({ path: rel, content: buf.toString('utf8'), size: st.size, truncated: st.size > MAX_VIEW_BYTES, mtime: st.mtimeMs });
+  } catch {
+    // (200, not 404, so the browser console doesn't log an error for a file that simply isn't there yet)
+    res.json({ missing: true });
+  }
+});
+
 // ---- if the frontend was built (npm run build), serve it too ------------------
 const built = path.resolve('dist/web');
 if (fs.existsSync(built)) app.use(express.static(built));

@@ -1,6 +1,6 @@
 // The draggable, resizable panel grid. The screen is always config.grid.cols x config.grid.rows
 // cells, stretched to fill the window, so layouts survive any window size.
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import GridLayout from 'react-grid-layout';
 import { config } from '@config';
 import type { LayoutItem } from '@shared/types';
@@ -60,7 +60,9 @@ export function Workspace() {
             return (
               <div key={p.id}>
                 <PanelFrame id={p.id} label={p.label} icon={p.icon}>
-                  <Body />
+                  <Suspense fallback={<div className="grid h-full place-items-center text-sm text-dim">Warming up…</div>}>
+                    <Body />
+                  </Suspense>
                 </PanelFrame>
               </div>
             );

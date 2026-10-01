@@ -51,6 +51,53 @@ export interface HistoryEntry {
   toolId: string;
 }
 
+/** A stretch of lines in a file that Claude read / edited / created. */
+export interface Region {
+  kind: Kind;
+  /** 1-based, inclusive. */
+  start: number;
+  end: number;
+  ts: number;
+  toolId: string;
+  /** True while the tool call is still running (the region is provisional). */
+  active: boolean;
+}
+
+/** Where Claude is "standing" in the code right now. Drives the cursor marker in the code view. */
+export interface CursorPos {
+  path: string;
+  line: number;
+  endLine?: number;
+  kind: Kind;
+  ts: number;
+  active: boolean;
+  toolId: string;
+}
+
+/** One hunk of a unified diff: lines start with ' ' (unchanged), '-' (removed) or '+' (added). */
+export interface Hunk {
+  oldStart: number;
+  oldLines: number;
+  newStart: number;
+  newLines: number;
+  lines: string[];
+}
+
+/** One edit Claude made, with enough detail to draw an animated diff. */
+export interface EditRecord {
+  id: string;
+  toolId: string;
+  path: string;
+  tool: string;
+  ts: number;
+  type: 'edit' | 'create';
+  hunks: Hunk[];
+  added: number;
+  removed: number;
+  /** Changed line ranges in the NEW file (used to find which functions changed). */
+  newRanges: Array<[number, number]>;
+}
+
 /** What Claude is doing right now (drives the avatar and heartbeat later). */
 export type Phase = 'idle' | 'thinking' | 'working' | 'done' | 'error';
 
@@ -76,6 +123,12 @@ export interface Derived {
   toolPaths: Map<string, { paths: string[]; kind: Kind }>;
   /** Tool calls running right now (toolId -> kind). Lets the map shimmer while a command runs. */
   running: Map<string, Kind>;
+  /** path -> stretches of lines Claude read / edited / created. */
+  regions: Map<string, Region[]>;
+  /** Where Claude last was (or is, if active) in the code. */
+  cursor: CursorPos | null;
+  /** Every edit Claude made, oldest first (capped). */
+  edits: EditRecord[];
 }
 
 export function emptyDerived(): Derived {
@@ -93,6 +146,9 @@ export function emptyDerived(): Derived {
     history: new Map(),
     toolPaths: new Map(),
     running: new Map(),
+    regions: new Map(),
+    cursor: null,
+    edits: [],
   };
 }
 
@@ -114,7 +170,51 @@ function touch(d: Derived, path: string, kind: Kind, ts: number, active: boolean
   d.touched.set(path, t);
 }
 
+/** Line ranges (in the new file) that a diff hunk adds. A pure deletion marks the line where text vanished. */
+function addedRanges(h: Hunk): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  let n = h.newStart;
+  let runStart = -1;
+  let deleted = false;
+  const close = () => {
+    if (runStart >= 0) out.push([runStart, n - 1]);
+    else if (deleted) out.push([Math.max(1, n), Math.max(1, n)]);
+    runStart = -1;
+    deleted = false;
+  };
+  for (const line of h.lines) {
+    const c = line[0];
+    if (c === '+') {
+      if (runStart < 0) runStart = n;
+      n++;
+    } else if (c === '-') {
+      if (runStart < 0) deleted = true;
+    } else {
+      close();
+      n++;
+    }
+  }
+  close();
+  return out;
+}
+
+const MAX_REGIONS_PER_FILE = 150;
+
+function addRegion(d: Derived, path: string, r: Region) {
+  const list = d.regions.get(path) ?? [];
+  list.push(r);
+  if (list.length > MAX_REGIONS_PER_FILE) list.shift();
+  d.regions.set(path, list);
+}
+
+function dropRegionsOf(d: Derived, toolId: string, path: string) {
+  const list = d.regions.get(path);
+  if (list) d.regions.set(path, list.filter((r) => r.toolId !== toolId));
+}
+
 function deactivateAll(d: Derived) {
+  for (const list of d.regions.values()) for (const r of list) r.active = false;
+  if (d.cursor) d.cursor = { ...d.cursor, active: false };
   for (const t of d.touched.values()) t.active = false;
   d.running.clear();
 }
@@ -163,6 +263,11 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
       d.running.set(e.toolId, e.toolKind);
       const written = typeof e.input.content === 'string' ? e.input.content.split('\n').length : undefined;
       for (const p of e.paths) touch(d, p, e.toolKind, e.ts, true, { tool: e.tool, toolId: e.toolId, lines: e.toolKind === 'create' ? written : undefined });
+      // The cursor jumps to where this call works, with a provisional highlighted region.
+      if (e.loc && e.paths[0] && (e.toolKind === 'read' || e.toolKind === 'edit' || e.toolKind === 'create')) {
+        d.cursor = { path: e.paths[0], line: e.loc.startLine, endLine: e.loc.endLine, kind: e.toolKind, ts: e.ts, active: true, toolId: e.toolId };
+        addRegion(d, e.paths[0], { kind: e.toolKind, start: e.loc.startLine, end: e.loc.endLine ?? e.loc.startLine, ts: e.ts, toolId: e.toolId, active: true });
+      }
       break;
     }
     case 'fs_change': {
@@ -193,6 +298,8 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
         const t = d.touched.get(p);
         if (t) (t.active = false), (t.ts = e.ts);
       }
+      // Replace the provisional region with the real one, and record edits for the diff view.
+      if (item?.type === 'tool') finishRegions(d, item, e);
       // Files a search found (Grep/Glob results) light up as SEARCHED.
       if (tp && tp.kind === 'search') for (const p of e.paths ?? []) touch(d, p, 'search', e.ts, false, { tool: 'search', toolId: e.toolId });
       break;
@@ -224,6 +331,45 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
       d.live = null;
       d.phase = 'idle';
       break;
+  }
+}
+
+/** A tool call finished: turn its provisional highlight into the real one, and remember edits. */
+function finishRegions(d: Derived, item: Extract<ChatItem, { type: 'tool' }>, e: Extract<SessionEvent, { kind: 'tool_end' }>) {
+  const path = item.paths[0];
+  if (!path) return;
+  dropRegionsOf(d, e.toolId, path);
+  if (d.cursor?.toolId === e.toolId) d.cursor = { ...d.cursor, active: false };
+  if (!e.ok) return;
+  const data = e.data as { file?: { startLine?: number; numLines?: number; totalLines?: number }; structuredPatch?: Hunk[]; type?: string } | undefined;
+
+  if (item.tool === 'Read') {
+    const f = data?.file;
+    const start = f?.startLine ?? 1;
+    const end = f?.numLines ? start + f.numLines - 1 : (f?.totalLines ?? start);
+    addRegion(d, path, { kind: 'read', start, end, ts: e.ts, toolId: e.toolId, active: false });
+    return;
+  }
+
+  if (item.toolKind === 'edit' || item.toolKind === 'create') {
+    const hunks = Array.isArray(data?.structuredPatch) ? data!.structuredPatch! : [];
+    const content = typeof item.input.content === 'string' ? item.input.content : '';
+    let records: Hunk[] = hunks;
+    const isCreate = item.toolKind === 'create' || data?.type === 'create';
+    // A brand-new file has no "before": show the whole content as added lines.
+    if (isCreate && records.length === 0 && content) {
+      const lines = content.replace(/\n$/, '').split('\n');
+      records = [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: lines.length, lines: lines.map((l) => `+${l}`) }];
+    }
+    if (records.length === 0) return;
+    const ranges = records.flatMap(addedRanges);
+    let added = 0;
+    let removed = 0;
+    for (const h of records) for (const l of h.lines) l[0] === '+' ? added++ : l[0] === '-' ? removed++ : 0;
+    for (const [a, b] of ranges) addRegion(d, path, { kind: isCreate ? 'create' : 'edit', start: a, end: b, ts: e.ts, toolId: e.toolId, active: false });
+    if (ranges[0]) d.cursor = { path, line: ranges[0][0], kind: item.toolKind, ts: e.ts, active: false, toolId: e.toolId };
+    d.edits.push({ id: `edit-${e.toolId}`, toolId: e.toolId, path, tool: item.tool, ts: e.ts, type: isCreate ? 'create' : 'edit', hunks: records, added, removed, newRanges: ranges });
+    if (d.edits.length > 120) d.edits.shift();
   }
 }
 

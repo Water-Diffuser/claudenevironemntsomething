@@ -8,7 +8,7 @@
 // ============================================================================
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { SessionEventBody, TodoItem } from '@shared/events';
-import { describeTool, flattenResult, pathsFromOutput, trimInput, trimText } from './toolInfo';
+import { describeTool, flattenResult, locateInFile, pathsFromOutput, trimInput, trimText } from './toolInfo';
 
 export interface MapperSink {
   /** Add an event to the log. */
@@ -156,6 +156,7 @@ export class EventMapper {
       paths: d.paths,
       summary: d.summary,
       parentToolId: parent,
+      loc: locateInFile(tool, input, this.cwd),
     });
     if (tool === 'TodoWrite' && Array.isArray(input.todos)) {
       this.sink.emit({ kind: 'todos', items: input.todos.map(toTodo) });

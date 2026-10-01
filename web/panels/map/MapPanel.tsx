@@ -254,7 +254,11 @@ export function MapPanel() {
       requestDraw();
     };
     update();
-    return subscribeView(update);
+    // Re-check when Claude's activity changes AND when the file list changes (on a fresh page load the
+    // events can arrive before the scan, which would make every touched file look "not on disk").
+    const unsubView = subscribeView(update);
+    const unsubScan = useScan.subscribe((s, p) => s.layoutVersion !== p.layoutVersion && update());
+    return () => (unsubView(), unsubScan());
   }, [requestDraw]);
 
   useEffect(

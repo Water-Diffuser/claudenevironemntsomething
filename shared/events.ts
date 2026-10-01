@@ -38,6 +38,8 @@ export type SessionEventBody =
       summary: string;
       /** Set when this call was made by a sub-agent. */
       parentToolId?: string | null;
+      /** Where in the (first) file this call works, 1-based. Lets the code view put Claude's "cursor" there. */
+      loc?: { startLine: number; endLine?: number };
     }
   | {
       kind: 'tool_end';
