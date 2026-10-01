@@ -110,6 +110,24 @@ app.get('/api/file', (req, res) => {
   }
 });
 
+// ---- your own sound files (see user-audio/README.md) ---------------------------
+// The browser asks for the list, then fetches the ones whose names match a sound.
+const AUDIO_EXT = /\.(wav|mp3|ogg|m4a|aac|flac)$/i;
+const audioDir = path.resolve(config.audio.userDir);
+const audioFiles = () => {
+  try {
+    return fs.readdirSync(audioDir).filter((f) => AUDIO_EXT.test(f));
+  } catch {
+    return [];
+  }
+};
+app.get('/api/audio', (_req, res) => res.json({ files: audioFiles() }));
+app.get('/api/audio/:file', (req, res) => {
+  const file = req.params.file;
+  if (!audioFiles().includes(file)) return void res.status(404).end(); // only files that are really in that folder
+  res.sendFile(path.join(audioDir, file));
+});
+
 // ---- if the frontend was built (npm run build), serve it too ------------------
 const built = path.resolve('dist/web');
 if (fs.existsSync(built)) app.use(express.static(built));

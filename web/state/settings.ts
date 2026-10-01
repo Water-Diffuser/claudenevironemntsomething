@@ -10,6 +10,15 @@ import { defaultThemeSettings, type ThemeSettings } from '../theme/applyTheme';
 
 export type LabelKey = keyof typeof config.labels;
 
+export interface AudioSettings {
+  master: number;
+  music: number;
+  tools: number;
+  ui: number;
+  alerts: number;
+  muted: boolean;
+}
+
 export interface UISettings {
   theme: ThemeSettings;
   colorCode: Partial<ColorCode>;
@@ -26,8 +35,10 @@ export interface UISettings {
   features: Record<string, boolean>;
   /** Dishes (achievements) you have earned: id -> when. */
   dishes: Record<string, number>;
-  /** Calm mode: no flashing, no glitch. */
+  /** Calm mode: no flashing, no glitch, no harsh sounds. */
   calm: boolean;
+  /** Sound volumes (0 to 1) and the mute switch. */
+  audio: AudioSettings;
   sidebarOpen: boolean;
 }
 
@@ -42,6 +53,7 @@ export const defaultUI = (): UISettings => ({
   features: {},
   dishes: {},
   calm: false,
+  audio: { ...config.audio.volumes, muted: false },
   sidebarOpen: true,
 });
 
@@ -68,7 +80,8 @@ export const useSettings = create<SettingsStore>((set, get) => ({
     try {
       const saved = (await (await fetch('/api/settings')).json()) as { ui?: Partial<UISettings> };
       // Merge over the defaults so settings files from older versions still work.
-      set({ ui: { ...defaultUI(), ...(saved.ui ?? {}) }, loaded: true });
+      const base = defaultUI();
+      set({ ui: { ...base, ...(saved.ui ?? {}), audio: { ...base.audio, ...(saved.ui?.audio ?? {}) } }, loaded: true });
     } catch {
       set({ loaded: true });
     }

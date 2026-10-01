@@ -55,6 +55,9 @@ function bump() {
 
 let toastId = 1;
 
+/** Other features (like sound) can listen to every NEW live event here. (Not called for replays or old sessions.) */
+export const eventListeners: Array<(event: SessionEvent, derived: Derived) => void> = [];
+
 export const useApp = create<AppStore>((set, get) => ({
   conn: 'connecting',
   server: null,
@@ -90,6 +93,7 @@ export const useApp = create<AppStore>((set, get) => ({
         events.push(msg.event);
         applyEvent(derived, msg.event);
         evaluateDishes(derived, true); // a new dish? (toast + trophy)
+        for (const l of eventListeners) l(msg.event, derived);
         bump();
         return;
       }

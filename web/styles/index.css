@@ -610,3 +610,8 @@ html[data-calm='true'] body::after {
   50% { transform: translate(calc(var(--fx-glitch) * -3px), calc(var(--fx-glitch) * 1px)) skewX(calc(var(--fx-glitch) * 4deg)); }
   100% { transform: translate(0, calc(var(--fx-glitch) * -1px)); }
 }
+
+/* sliders (sound menu etc.) take the accent color */
+input[type='range'] {
+  accent-color: var(--c-accent);
+}

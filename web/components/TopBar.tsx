@@ -6,6 +6,7 @@ import { send, useApp, useView } from '../state/store';
 import { goLive } from '../state/replay';
 import { useLabel, useSettings } from '../state/settings';
 import { useUI } from '../state/ui';
+import { SoundControl } from './SoundControl';
 
 const PERMISSION_LABELS: Record<PermissionModeName, string> = {
   default: 'Ask me first',
@@ -74,6 +75,7 @@ export function TopBar() {
             ⏪ REPLAY · back to live
           </button>
         )}
+        <SoundControl />
         <span className="flex items-center gap-1.5 text-xs text-dim" title={`backend: ${conn}`}>
           <span className={`inline-block size-2 rounded-full ${conn === 'open' ? 'bg-good' : conn === 'connecting' ? 'animate-pulse bg-warn' : 'bg-bad'}`} />
           {conn === 'open' ? (busy ? 'working' : 'ready') : conn}

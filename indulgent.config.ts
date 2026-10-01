@@ -79,6 +79,8 @@ const labels = {
   voice: 'The Voice',
   newSession: 'New Take',
   project: 'Kitchen',
+  startSession: 'Start Session',
+  sound: 'Sound',
 };
 
 // ---- the color code ---------------------------------------------------------
@@ -389,6 +391,8 @@ const features: Record<string, boolean> = {
   heartbeat: true,
   donut: true,
   stats: true,
+  /** The generative sound (still silent until you press "Start Session"). */
+  sound: true,
   /** The strip of meters (Fullness, The Tab, stars) and the avatar under the top bar. */
   hud: true,
 };
@@ -420,6 +424,43 @@ const hud = {
   /** The Fullness bar turns warm and then red at these fractions of the context window. */
   fullnessWarn: 0.7,
   fullnessDanger: 0.9,
+};
+
+// ---- sound -------------------------------------------------------------------
+// Nothing plays until you press "Start Session" in the top bar. All sounds are made live
+// by the browser (no audio files needed). To use your OWN sounds instead, drop files into
+// the `userDir` folder: see user-audio/README.md for the file names.
+const audio = {
+  /** Starting volumes, 0 to 1. Change them in the sound menu; your changes are saved. */
+  volumes: { master: 0.7, music: 0.55, tools: 0.6, ui: 0.5, alerts: 0.7 },
+  /** Folder (next to this file) for your own sound files. */
+  userDir: 'user-audio',
+  /** The music is a loop of chords. Numbers are MIDI notes (60 = middle C, +1 = one semitone up). */
+  chords: [
+    [53, 57, 60, 64, 67], // Fmaj9    sweet
+    [50, 53, 57, 60, 64], // Dm9      softer
+    [46, 53, 57, 62, 64], // Bb lydian
+    [48, 52, 55, 59, 61], // C with a flat 9: the "something is slightly wrong" chord
+  ],
+  /** How many beats each chord lasts. */
+  beatsPerChord: 8,
+  /** Loudness of each pad voice, and how much reverb ("room") is mixed in. */
+  padLevel: 0.028,
+  reverb: 0.45,
+  /**
+   * How the music changes with what Claude is doing.
+   *   bpm      speed          cutoff  how bright (Hz; higher = brighter)
+   *   level    music loudness  wobble  detune warble in cents (the "something broke" sound)
+   */
+  moods: {
+    idle: { bpm: 50, cutoff: 800, level: 0.7, wobble: 0 },
+    thinking: { bpm: 72, cutoff: 1500, level: 0.8, wobble: 0 },
+    working: { bpm: 112, cutoff: 3600, level: 1, wobble: 0 },
+    done: { bpm: 60, cutoff: 5200, level: 0.9, wobble: 0 },
+    glitching: { bpm: 84, cutoff: 1000, level: 0.85, wobble: 48 },
+  },
+  /** Each tool call plays one note (MIDI) by its color-code kind. These all sit nicely on the chords above. */
+  toolNotes: { read: 76, search: 79, edit: 81, create: 84, delete: 62, run: 72, other: 69 } as Record<Kind, number>,
 };
 
 // ---- which files the project scanner skips ----------------------------------
@@ -458,6 +499,7 @@ export const config = {
   features,
   limits,
   hud,
+  audio,
   scan,
   languages,
 };

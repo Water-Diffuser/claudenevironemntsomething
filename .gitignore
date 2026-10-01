@@ -4,3 +4,7 @@ data/
 .env
 *.log
 .DS_Store
+
+# your own sound files (the folder and its README stay)
+user-audio/*
+!user-audio/README.md
