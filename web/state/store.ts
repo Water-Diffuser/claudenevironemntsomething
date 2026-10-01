@@ -12,6 +12,7 @@ import type { SessionEvent } from '@shared/events';
 import type { ClientMsg, PermissionRequest, ServerMsg, ServerState, SessionInfo } from '@shared/protocol';
 import { applyEvent, computeDerived, emptyDerived, type Derived } from './derived';
 import { useScan } from './scan';
+import { useSide } from './side';
 
 export interface Toast {
   id: number;
@@ -109,6 +110,10 @@ export const useApp = create<AppStore>((set, get) => ({
         return;
       case 'scan_patch':
         useScan.getState().applyPatch(msg.patch);
+        return;
+      case 'side_delta':
+      case 'side_end':
+        useSide.getState().apply(msg);
         return;
       case 'error':
         get().toast(msg.message, 'error');

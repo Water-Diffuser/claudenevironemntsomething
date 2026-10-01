@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Check, Circle, Loader2 } from 'lucide-react';
 import { Markdown } from './Markdown';
+import { useApp } from '../state/store';
 
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : JSON.stringify(v));
 
@@ -12,7 +13,7 @@ function Block({ children, tone }: { children: React.ReactNode; tone?: 'add' | '
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="mb-1 mt-2 text-[0.68rem] uppercase tracking-wider text-dim first:mt-0">{children}</div>;
+  return <div className="mb-1 mt-2 break-all font-mono text-[0.72rem] text-dim first:mt-0">{children}</div>;
 }
 
 /** Long text, collapsed to `max` characters until you click. */
@@ -30,6 +31,12 @@ export function Clamp({ text, max = 1500 }: { text: string; max?: number }) {
 }
 
 export function ToolInput({ tool, input }: { tool: string; input: Record<string, unknown> }) {
+  // Show file paths relative to the project instead of the long absolute path.
+  const cwd = useApp((s) => s.server?.cwd);
+  const rel = (p: unknown) => {
+    const v = str(p);
+    return cwd && v.startsWith(cwd + '/') ? v.slice(cwd.length + 1) : v;
+  };
   switch (tool) {
     case 'Bash':
       return (
@@ -41,7 +48,7 @@ export function ToolInput({ tool, input }: { tool: string; input: Record<string,
     case 'Edit':
       return (
         <>
-          <Label>{str(input.file_path)}</Label>
+          <Label>{rel(input.file_path)}</Label>
           <Block tone="del"><Clamp text={str(input.old_string)} max={900} /></Block>
           <div className="h-1" />
           <Block tone="add"><Clamp text={str(input.new_string)} max={900} /></Block>
@@ -51,7 +58,7 @@ export function ToolInput({ tool, input }: { tool: string; input: Record<string,
       const edits = Array.isArray(input.edits) ? (input.edits as Array<Record<string, unknown>>) : [];
       return (
         <>
-          <Label>{str(input.file_path)}</Label>
+          <Label>{rel(input.file_path)}</Label>
           {edits.slice(0, 6).map((e, i) => (
             <div key={i} className="mb-2">
               <Block tone="del"><Clamp text={str(e.old_string)} max={500} /></Block>
@@ -66,7 +73,7 @@ export function ToolInput({ tool, input }: { tool: string; input: Record<string,
     case 'Write':
       return (
         <>
-          <Label>{str(input.file_path)}</Label>
+          <Label>{rel(input.file_path)}</Label>
           <Block tone="add"><Clamp text={str(input.content)} max={1500} /></Block>
         </>
       );

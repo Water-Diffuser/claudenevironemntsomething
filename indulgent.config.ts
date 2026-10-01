@@ -42,6 +42,11 @@ const app = {
    * 'local' = <project>/.claude/settings.local.json
    */
   settingSources: ['user', 'project', 'local'] as Array<'user' | 'project' | 'local'>,
+  /**
+   * Which Claude model answers "Explain this" and "Sketch the architecture".
+   * Leave undefined to use your default model. Set e.g. 'haiku' for faster, cheaper answers.
+   */
+  sideModel: undefined as string | undefined,
 };
 
 // ---- labels (rename anything) ----------------------------------------------
@@ -292,26 +297,37 @@ const layouts: Record<string, NamedLayout> = {
   'control-room': {
     label: 'Control Room',
     items: [
-      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
-      { i: 'map', x: 7, y: 0, w: 10, h: 14 },
-      { i: 'code', x: 17, y: 0, w: 7, h: 14 },
-      { i: 'diff', x: 7, y: 14, w: 17, h: 10 },
+      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
+      { i: 'map', x: 6, y: 0, w: 9, h: 12 },
+      { i: 'graph', x: 15, y: 0, w: 9, h: 12 },
+      { i: 'code', x: 6, y: 12, w: 9, h: 12 },
+      { i: 'diff', x: 15, y: 12, w: 9, h: 12 },
     ],
   },
   'map-room': {
     label: 'Map Room',
     items: [
-      { i: 'map', x: 0, y: 0, w: 16, h: 24 },
-      { i: 'booth', x: 16, y: 0, w: 8, h: 12 },
-      { i: 'code', x: 16, y: 12, w: 8, h: 12 },
+      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
+      { i: 'map', x: 6, y: 0, w: 9, h: 24 },
+      { i: 'graph', x: 15, y: 0, w: 9, h: 24 },
     ],
   },
   studio: {
     label: 'Studio',
     items: [
-      { i: 'booth', x: 0, y: 0, w: 8, h: 24 },
-      { i: 'diff', x: 8, y: 0, w: 16, h: 12 },
-      { i: 'code', x: 8, y: 12, w: 16, h: 12 },
+      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
+      { i: 'diff', x: 7, y: 0, w: 17, h: 12 },
+      { i: 'code', x: 7, y: 12, w: 17, h: 12 },
+    ],
+  },
+  inspector: {
+    label: 'Inspector',
+    items: [
+      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
+      { i: 'graph', x: 6, y: 0, w: 10, h: 14 },
+      { i: 'impact', x: 16, y: 0, w: 8, h: 14 },
+      { i: 'explain', x: 6, y: 14, w: 9, h: 10 },
+      { i: 'sketch', x: 15, y: 14, w: 9, h: 10 },
     ],
   },
   focus: {
@@ -328,6 +344,10 @@ const features: Record<string, boolean> = {
   map: true,
   code: true,
   diff: true,
+  graph: true,
+  impact: true,
+  explain: true,
+  sketch: true,
 };
 
 // ---- performance caps -------------------------------------------------------
@@ -340,6 +360,12 @@ const limits = {
   maxToolOutputChars: 12000,
   /** Largest single string kept inside a tool's input (characters). */
   maxInputStringChars: 20000,
+  /** The dependency graph shows at most this many nodes; bigger projects fold folders into one node. */
+  graphMaxNodes: 220,
+  /** ...and at most this many function/class nodes in the function-level view. */
+  graphMaxFunctionNodes: 260,
+  /** Edges are thinned to this many (keeping the ones Claude touched and the strongest). */
+  graphMaxEdges: 900,
 };
 
 // ---- which files the project scanner skips ----------------------------------

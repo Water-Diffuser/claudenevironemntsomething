@@ -1,10 +1,12 @@
 // A small card about the file you clicked: size, language, what Claude did to it, who imports it.
 import { useMemo } from 'react';
-import { X } from 'lucide-react';
+import { Radar, Sparkles, X } from 'lucide-react';
 import { config } from '@config';
 import { kindVar } from '../../components/KindIcon';
 import { timeAgo } from '../../lib/format';
-import { useDerived } from '../../state/store';
+import { askExplain } from '../../state/side';
+import { send, useDerived } from '../../state/store';
+import { useUI } from '../../state/ui';
 import { useScan } from '../../state/scan';
 
 export function FileCard({ path, onClose }: { path: string; onClose: () => void }) {
@@ -13,6 +15,7 @@ export function FileCard({ path, onClose }: { path: string; onClose: () => void 
   const analysisVersion = useScan((s) => s.analysisVersion);
   const info = files.get(path);
   const history = d.history.get(path) ?? [];
+  const setImpactTarget = useUI((s) => s.setImpactTarget);
 
   /** Files that import this one. */
   const importedBy = useMemo(() => {
@@ -36,6 +39,14 @@ export function FileCard({ path, onClose }: { path: string; onClose: () => void 
         </div>
         <button onClick={onClose} aria-label="Close" className="text-dim hover:text-ink">
           <X size={15} />
+        </button>
+      </div>
+      <div className="flex gap-1.5 border-b border-line px-3 py-1.5">
+        <button className="btn !px-2 !py-0.5 text-xs" onClick={() => askExplain(send, { path })} title="Ask Claude for a plain-English explanation (see Liner Notes)">
+          <Sparkles size={12} /> Explain
+        </button>
+        <button className="btn !px-2 !py-0.5 text-xs" onClick={() => setImpactTarget({ path, symbolIds: [] })} title="What imports this file? (see Ripples)">
+          <Radar size={12} /> What breaks?
         </button>
       </div>
       <div className="space-y-3 overflow-y-auto px-3 py-2">

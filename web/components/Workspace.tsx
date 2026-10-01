@@ -15,13 +15,18 @@ export function Workspace() {
   const { ref, width, height } = useElementSize<HTMLDivElement>();
   const { cols, rows, margin } = config.grid;
 
-  const visible = useMemo(() => PANELS.filter((p) => isFeatureOn(ui, p.id) && !ui.hidden.includes(p.id)), [ui]);
+  const layoutDefEarly = ui.customLayouts[ui.layout] ?? config.layouts[ui.layout] ?? config.layouts[config.defaultLayout];
+  const visible = useMemo(
+    () => PANELS.filter((p) => isFeatureOn(ui, p.id) && !ui.hidden.includes(p.id) && (layoutDefEarly.items.some((i) => i.i === p.id) || ui.extraPanels.includes(p.id))),
+    [ui, layoutDefEarly],
+  );
   const layoutDef = ui.customLayouts[ui.layout] ?? config.layouts[ui.layout] ?? config.layouts[config.defaultLayout];
 
   // Panels in this layout that are visible, plus any visible panel the layout doesn't mention (placed at the bottom).
   const items: Array<LayoutItem & { minW?: number; minH?: number }> = useMemo(() => {
     const known = layoutDef.items.filter((i) => visible.some((p) => p.id === i.i));
-    const missing = visible.filter((p) => !layoutDef.items.some((i) => i.i === p.id));
+    // Panels that the layout doesn't place stay hidden, unless you added them from the panel menu.
+    const missing = visible.filter((p) => !layoutDef.items.some((i) => i.i === p.id) && ui.extraPanels.includes(p.id));
     return [
       ...known,
       ...missing.map((p) => ({ i: p.id, x: 0, y: rows, w: Math.min(cols, 12), h: 8 })),
@@ -29,7 +34,7 @@ export function Workspace() {
       const def = PANELS.find((p) => p.id === i.i);
       return { ...i, minW: def?.minW ?? 3, minH: def?.minH ?? 3 };
     });
-  }, [layoutDef, visible, cols, rows]);
+  }, [layoutDef, visible, cols, rows, ui.extraPanels]);
 
   // Stretch rows so `rows` rows exactly fill the available height.
   const rowHeight = Math.max(8, (height - margin * (rows + 1)) / rows);

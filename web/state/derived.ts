@@ -98,6 +98,14 @@ export interface EditRecord {
   newRanges: Array<[number, number]>;
 }
 
+/** One hop of Claude's path through the project: it went from file `from` to file `to`. */
+export interface TrailHop {
+  from: string;
+  to: string;
+  ts: number;
+  kind: Kind;
+}
+
 /** What Claude is doing right now (drives the avatar and heartbeat later). */
 export type Phase = 'idle' | 'thinking' | 'working' | 'done' | 'error';
 
@@ -129,6 +137,8 @@ export interface Derived {
   cursor: CursorPos | null;
   /** Every edit Claude made, oldest first (capped). */
   edits: EditRecord[];
+  /** The path Claude walked through the files (the graph draws it as a glowing trail). */
+  trail: TrailHop[];
 }
 
 export function emptyDerived(): Derived {
@@ -149,6 +159,7 @@ export function emptyDerived(): Derived {
     regions: new Map(),
     cursor: null,
     edits: [],
+    trail: [],
   };
 }
 
@@ -263,6 +274,15 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
       d.running.set(e.toolId, e.toolKind);
       const written = typeof e.input.content === 'string' ? e.input.content.split('\n').length : undefined;
       for (const p of e.paths) touch(d, p, e.toolKind, e.ts, true, { tool: e.tool, toolId: e.toolId, lines: e.toolKind === 'create' ? written : undefined });
+      // Record the hop from the previous file to this one (the graph shows Claude's path).
+      if (e.paths[0] && e.toolKind !== 'search' && e.toolKind !== 'run' && e.toolKind !== 'other') {
+        const last = d.trail[d.trail.length - 1];
+        const from = last?.to ?? d.cursor?.path;
+        if (from && from !== e.paths[0]) {
+          d.trail.push({ from, to: e.paths[0], ts: e.ts, kind: e.toolKind });
+          if (d.trail.length > 80) d.trail.shift();
+        } else if (!from) d.trail.push({ from: e.paths[0], to: e.paths[0], ts: e.ts, kind: e.toolKind });
+      }
       // The cursor jumps to where this call works, with a provisional highlighted region.
       if (e.loc && e.paths[0] && (e.toolKind === 'read' || e.toolKind === 'edit' || e.toolKind === 'create')) {
         d.cursor = { path: e.paths[0], line: e.loc.startLine, endLine: e.loc.endLine, kind: e.toolKind, ts: e.ts, active: true, toolId: e.toolId };

@@ -103,7 +103,7 @@ export class ProjectService {
       awaitWriteFinish: { stabilityThreshold: 120, pollInterval: 40 },
       ignored: (p: string) => {
         const rel = path.relative(root, p).split(path.sep).join('/');
-        return rel !== '' && isIgnoredPath(rel);
+        return rel !== '' && isIgnoredPath(rel, root);
       },
     });
     const queue = (kind: FsChangeKind) => (abs: string) => {
@@ -138,7 +138,8 @@ export class ProjectService {
         this.onFsChange(rel, 'unlink');
         continue;
       }
-      if (kind === 'add' && !this.fileSet.has(rel) && (await isGitIgnored(this.root, rel))) continue;
+      // A file we don't know yet might be git-ignored (build output, logs...). Skip those.
+      if (!this.fileSet.has(rel) && (await isGitIgnored(this.root, rel))) continue;
       const stat = await statFile(this.root, rel);
       if (!stat || stat.binary) continue;
       const info = this.analyzer ? await this.analyzer.analyze(stat.info) : stat.info;
@@ -152,6 +153,20 @@ export class ProjectService {
       const patch: ScanPatch = { upserts, removed };
       this.broadcast({ t: 'scan_patch', patch });
     }
+  }
+
+  // ---- lookups used by the side questions (explain / sketch) ------------------------
+  fileInfo(rel: string): FileInfo | undefined {
+    return this.files.get(rel);
+  }
+  allFiles(): FileInfo[] {
+    return [...this.files.values()];
+  }
+  /** Files that import `rel`. */
+  importedBy(rel: string): string[] {
+    const out: string[] = [];
+    for (const f of this.files.values()) if (f.imports?.some((i) => i.resolved === rel)) out.push(f.path);
+    return out;
   }
 
   async close() {

@@ -473,3 +473,80 @@ html[data-calm='true'] body::after {
   50% { filter: brightness(1.6); }
 }
 .monaco-editor .margin-view-overlays .line-numbers { font-family: var(--f-mono); }
+
+/* ---- 9. dependency graph (React Flow) ---------------------------------------------- */
+.indulgent-flow {
+  --xy-background-color: transparent;
+  --xy-minimap-background-color: var(--c-bg-alt);
+  --xy-controls-button-background-color: var(--c-surface-hi);
+  --xy-controls-button-color: var(--c-text);
+  --xy-controls-button-border-color: var(--c-border);
+  --xy-controls-button-background-color-hover: var(--c-surface);
+  --xy-attribution-background-color: transparent;
+}
+.indulgent-flow .react-flow__node { cursor: pointer; }
+
+.gnode {
+  position: relative;
+  border-radius: calc(var(--radius) * 0.55);
+  border: 1px solid var(--c-border);
+  background: linear-gradient(180deg, var(--c-surface-hi), var(--c-surface));
+  color: var(--c-text);
+  transition: opacity var(--t-med), transform var(--t-fast);
+  overflow: visible;
+}
+.gnode:hover { border-color: var(--c-accent-2); transform: translateY(-1px); }
+.gnode-folder { border-style: dashed; border-width: 1.5px; background: var(--c-bg-alt); }
+.gnode-fn, .gnode-method { border-radius: 999px; }
+.gnode-class { border-color: color-mix(in srgb, var(--k-search) 60%, var(--c-border)); }
+.gnode.is-selected { border-color: var(--c-accent-2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-accent-2) 50%, transparent), 0 0 calc(var(--fx-glow) * 14px) var(--c-accent-2); }
+.gnode.is-dim { opacity: 0.22; }
+
+/* Flash then afterglow when Claude touches a node. The 60s animation is "pre-aged" with a negative delay. */
+.touch-overlay {
+  position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  background: var(--kc); opacity: 0;
+  animation: touch-fade 60s linear forwards;
+}
+.touch-overlay.live { animation: touch-live 0.8s ease-in-out infinite alternate; }
+@keyframes touch-fade { 0% { opacity: 0.9; } 3% { opacity: 0.55; } 25% { opacity: 0.28; } 100% { opacity: 0; } }
+@keyframes touch-live { from { opacity: 0.4; } to { opacity: 0.92; } }
+.touch-ring {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  animation: touch-ring 1.4s ease-out forwards;
+}
+@keyframes touch-ring {
+  from { box-shadow: 0 0 0 0 var(--kc), 0 0 calc(var(--fx-glow) * 22px) var(--kc); opacity: 1; }
+  to { box-shadow: 0 0 0 16px transparent, 0 0 0 transparent; opacity: 0; }
+}
+
+/* Impact ("Ripples"): the changed thing pulses; things that depend on it get rings that weaken with distance. */
+.gnode.impact-src { border-color: var(--c-accent-2); box-shadow: 0 0 0 2px var(--c-accent-2); }
+.gnode.impact-1 { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-accent-2) 90%, transparent); }
+.gnode.impact-2 { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-accent-2) 65%, transparent); }
+.gnode.impact-3 { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-accent-2) 42%, transparent); }
+.gnode.impact-4 { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-accent-2) 24%, transparent); }
+.ripple {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  border: 2px solid var(--c-accent-2);
+  animation: ripple 2.2s ease-out infinite;
+}
+@keyframes ripple { from { transform: scale(1); opacity: 0.9; } to { transform: scale(1.9, 2.4); opacity: 0; } }
+
+/* edges */
+.gedge path { stroke: color-mix(in srgb, var(--c-text-dim) 55%, transparent); fill: none; }
+.gedge .gedge-head { fill: color-mix(in srgb, var(--c-text-dim) 70%, transparent); stroke: none; }
+.gedge.weak path:not(.gedge-head) { stroke-dasharray: 4 4; }
+.gedge.is-dim { opacity: 0.12; }
+.gedge.impacted path { stroke: var(--c-accent-2); }
+.gedge.impacted .gedge-head { fill: var(--c-accent-2); }
+.gedge.trail path:not(.gedge-head) { stroke-dasharray: 2 5; }
+.gedge.glow path { stroke: var(--kc); animation: edge-fade 60s linear forwards; filter: drop-shadow(0 0 calc(var(--fx-glow) * 5px) var(--kc)); }
+.gedge.glow .gedge-head { fill: var(--kc); animation: edge-fade 60s linear forwards; }
+@keyframes edge-fade { 0% { opacity: 1; } 4% { opacity: 1; } 30% { opacity: 0.6; } 100% { opacity: 0.35; } }
+
+/* the controls and minimap follow the theme */
+.indulgent-flow .react-flow__controls { box-shadow: none; border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; }
+.indulgent-flow .react-flow__controls-button { border-bottom: 1px solid var(--c-border); }
+.indulgent-flow .react-flow__controls-button svg { fill: currentColor; }
+.indulgent-flow .react-flow__minimap { border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; }

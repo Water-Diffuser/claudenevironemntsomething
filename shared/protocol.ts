@@ -79,6 +79,9 @@ export type ServerMsg =
   | { t: 'scan'; scan: ProjectScan | null }
   /** Incremental changes to the scan (files saved, analysis finished...). */
   | { t: 'scan_patch'; patch: ScanPatch }
+  /** Streaming text for a side question. */
+  | { t: 'side_delta'; id: string; text?: string; /** clear what was shown so far (Claude is going to use a tool first) */ reset?: boolean; /** a short progress line, e.g. "Reading src/app.ts" */ status?: string }
+  | { t: 'side_end'; id: string; ok: boolean; error?: string; costUsd?: number }
   | { t: 'error'; message: string };
 
 // ---- browser -> server ------------------------------------------------------
@@ -98,7 +101,20 @@ export type ClientMsg =
   | { t: 'resume'; sessionId: string }
   | { t: 'set_mode'; mode: Mode }
   | { t: 'set_permission_mode'; mode: PermissionModeName }
-  | { t: 'refresh_sessions' };
+  | { t: 'refresh_sessions' }
+  /** Ask Claude a side question (explain a file/function, or sketch the architecture). Never touches your project. */
+  | { t: 'side'; id: string; kind: SideKind; target?: SideTarget }
+  | { t: 'side_cancel'; id: string };
+
+export type SideKind = 'explain' | 'sketch';
+
+/** What to explain: a whole file, or one function/class inside it. */
+export interface SideTarget {
+  path: string;
+  symbol?: string;
+  startLine?: number;
+  endLine?: number;
+}
 
 // ---- REST helpers -----------------------------------------------------------
 export interface FsEntry {

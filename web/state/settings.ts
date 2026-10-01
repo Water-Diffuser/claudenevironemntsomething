@@ -20,6 +20,8 @@ export interface UISettings {
   customLayouts: Record<string, NamedLayout>;
   /** Panels you hid. */
   hidden: string[];
+  /** Panels you added to the current layout from the panel menu (they appear at the bottom). */
+  extraPanels: string[];
   /** Feature switches you changed (on top of config.features). */
   features: Record<string, boolean>;
   /** Calm mode: no flashing, no glitch. */
@@ -34,6 +36,7 @@ export const defaultUI = (): UISettings => ({
   layout: config.defaultLayout,
   customLayouts: {},
   hidden: [],
+  extraPanels: [],
   features: {},
   calm: false,
   sidebarOpen: true,

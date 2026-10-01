@@ -18,6 +18,7 @@ import { EventMapper } from './claude/eventMapper';
 import { runLive } from './claude/live';
 import { runRehearsal } from './claude/rehearsal';
 import { describeTool, trimInput } from './claude/toolInfo';
+import { runSide } from './claude/side';
 import { ProjectService, type FsChangeKind } from './analysis/project';
 import { deleteSessionFile, listStoredSessions, loadSession, loadSettings, saveSession, saveSettings } from './store/jsonStore';
 
@@ -140,6 +141,39 @@ export class Runtime {
         return this.pushState();
       case 'refresh_sessions':
         return this.refreshSessions();
+      case 'side':
+        return this.startSide(msg.id, msg.kind, msg.target);
+      case 'side_cancel':
+        this.sides.get(msg.id)?.abort();
+        return;
+    }
+  }
+
+  // ---- side questions (explain / sketch) --------------------------------------------
+  private sides = new Map<string, AbortController>();
+
+  private async startSide(id: string, kind: 'explain' | 'sketch', target?: { path: string; symbol?: string; startLine?: number; endLine?: number }) {
+    const cwd = this.state.cwd;
+    if (!cwd) return this.fail('Pick a project first.');
+    if (kind === 'explain' && !target) return this.fail('Nothing to explain.');
+    this.sides.get(id)?.abort();
+    const abort = new AbortController();
+    this.sides.set(id, abort);
+    try {
+      const { costUsd } = await runSide(
+        { kind, target, cwd, rehearsal: this.state.mode === 'rehearsal', project: this.project, signal: abort.signal },
+        {
+          text: (text) => this.broadcast({ t: 'side_delta', id, text }),
+          reset: () => this.broadcast({ t: 'side_delta', id, reset: true }),
+          status: (status) => this.broadcast({ t: 'side_delta', id, status }),
+        },
+      );
+      this.broadcast({ t: 'side_end', id, ok: true, costUsd });
+    } catch (err: any) {
+      const aborted = abort.signal.aborted || err?.name === 'AbortError';
+      this.broadcast({ t: 'side_end', id, ok: false, error: aborted ? 'cancelled' : friendlyError(err) });
+    } finally {
+      this.sides.delete(id);
     }
   }
 

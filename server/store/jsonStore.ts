@@ -11,6 +11,8 @@ import { config } from '@config';
 import type { SessionEvent } from '@shared/events';
 
 const root = path.resolve(process.env.INDULGENT_DATA ?? config.app.dataDir);
+/** Where this app keeps its own files. The project scanner/watcher must ignore it (or saving a session would look like a project change). */
+export const dataRoot = root;
 const sessionsDir = path.join(root, 'sessions');
 fs.mkdirSync(sessionsDir, { recursive: true });
 

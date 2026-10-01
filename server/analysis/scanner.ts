@@ -11,6 +11,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { config } from '@config';
 import type { FileInfo, ImportInfo } from '../../shared/scan.ts';
+import { dataRoot } from '../store/jsonStore.ts';
 import { loadLanguages, pluginFor } from './languages/index.ts';
 import type { LanguagePlugin, Resolver } from './languages/types.ts';
 import { withTree } from './parser.ts';
@@ -19,8 +20,14 @@ const execFileP = promisify(execFile);
 const ignoreDirs = new Set(config.scan.ignoreDirs);
 
 /** Is this project-relative path inside a folder we always skip (node_modules, .git...)? */
-export function isIgnoredPath(rel: string): boolean {
-  return rel.split('/').some((seg) => ignoreDirs.has(seg));
+export function isIgnoredPath(rel: string, root?: string): boolean {
+  if (rel.split('/').some((seg) => ignoreDirs.has(seg))) return true;
+  // This app's own data folder (saved sessions) is never part of the project, even when you open this app's own folder.
+  if (root) {
+    const abs = path.resolve(root, rel);
+    if (abs === dataRoot || abs.startsWith(dataRoot + path.sep)) return true;
+  }
+  return false;
 }
 
 /** Ask git which files belong to the project (respects .gitignore). Returns null if it isn't a git repo. */
@@ -101,7 +108,7 @@ export async function scanFiles(root: string): Promise<ScanResult> {
   // whole folder is ignored by a parent repo), walk the folder ourselves.
   let list = await gitFiles(root);
   if (!list || list.length === 0) list = await walkFiles(root, config.scan.maxFiles * 2);
-  list = [...new Set(list)].filter((f) => !isIgnoredPath(f));
+  list = [...new Set(list)].filter((f) => !isIgnoredPath(f, root));
   const truncated = list.length > config.scan.maxFiles;
   if (truncated) list = list.slice(0, config.scan.maxFiles);
 
