@@ -10,7 +10,6 @@
 // ============================================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, Eye, EyeOff } from 'lucide-react';
-import { config } from '@config';
 import { KINDS, type Kind } from '@shared/events';
 import { kindVar } from '../../components/KindIcon';
 import { timeAgo } from '../../lib/format';
@@ -19,7 +18,7 @@ import { useDebounced } from '../../lib/useDebounced';
 import { useElementSize } from '../../lib/useElementSize';
 import { useReplay } from '../../state/replay';
 import { useScan } from '../../state/scan';
-import { useLabel, useSettings } from '../../state/settings';
+import { useLabel, useSettings, useKindLabels } from '../../state/settings';
 import { getView, subscribeView, useApp, useDerived, useView } from '../../state/store';
 import { useUI } from '../../state/ui';
 import { dur } from '../../theme/motion';
@@ -48,6 +47,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 export function MapPanel() {
+  const kindLabels = useKindLabels();
   const label = useLabel('map');
   const calm = useSettings((s) => s.ui.calm);
   const themeRev = useThemeRev((s) => s.rev);
@@ -424,10 +424,10 @@ export function MapPanel() {
       {/* legend: the color code */}
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t border-line px-2 py-1.5 text-[0.7rem]">
         {KINDS.filter((k) => k !== 'other').map((k: Kind) => (
-          <span key={k} className="inline-flex items-center gap-1" title={`${config.kindLabels[k]}: ${litCounts[k] ?? 0} files lit`}>
+          <span key={k} className="inline-flex items-center gap-1" title={`${kindLabels[k]}: ${litCounts[k] ?? 0} files lit`}>
             <span className="inline-block size-2.5 rounded-sm" style={{ background: kindVar(k) }} />
             <span style={{ color: kindVar(k) }} className="font-semibold tracking-wide">
-              {config.kindLabels[k]}
+              {kindLabels[k]}
             </span>
             {!!litCounts[k] && <span className="text-dim">{litCounts[k]}</span>}
           </span>
@@ -442,6 +442,7 @@ export function MapPanel() {
 }
 
 function Tooltip({ tip, bounds }: { tip: { cell: Cell; x: number; y: number }; bounds: { w: number; h: number } }) {
+  const kindLabels = useKindLabels();
   const { cell } = tip;
   const n = cell.node;
   const t = getView().derived.touched.get(n.path);
@@ -456,7 +457,7 @@ function Tooltip({ tip, bounds }: { tip: { cell: Cell; x: number; y: number }; b
       </div>
       {t && (
         <div className="mt-0.5" style={{ color: kindVar(t.kind) }}>
-          {config.kindLabels[t.kind]} {timeAgo(t.ts)}
+          {kindLabels[t.kind]} {timeAgo(t.ts)}
           {t.count > 1 ? ` · ${t.count}×` : ''}
         </div>
       )}

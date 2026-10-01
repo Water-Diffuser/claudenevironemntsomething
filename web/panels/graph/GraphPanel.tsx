@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Minus, Plus, Radar, RefreshCw, Sparkles } from 'lucide-react';
 import { useElementSize } from '../../lib/useElementSize';
 import { config } from '@config';
+import { useKindLabels } from '../../state/settings';
 import type { Kind } from '@shared/events';
 import { kindVar } from '../../components/KindIcon';
 import { readThemeColors } from '../../lib/themeColors';
@@ -36,6 +37,7 @@ interface TouchInfo {
 }
 
 function GraphInner() {
+  const kindLabels = useKindLabels();
   const d = useDerived();
   const files = useScan((s) => s.files);
   const progress = useScan((s) => s.progress);
@@ -330,7 +332,7 @@ function GraphInner() {
             <span key={k} className="inline-flex items-center gap-1">
               <span className="inline-block size-2 rounded-sm" style={{ background: kindVar(k) }} />
               <span style={{ color: kindVar(k) }} className="font-semibold">
-                {config.kindLabels[k]}
+                {kindLabels[k]}
               </span>
             </span>
           ))}

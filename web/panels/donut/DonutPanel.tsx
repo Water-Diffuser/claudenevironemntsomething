@@ -3,14 +3,15 @@
 //  Slice colors are the color code. Hover a slice to see the exact tools.
 // ============================================================================
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { config } from '@config';
+import { useKindLabels } from '../../state/settings';
 import { KINDS, type Kind } from '@shared/events';
 import { kindVar } from '../../components/KindIcon';
 import { useDerived } from '../../state/store';
 
 export default function DonutPanel() {
+  const kindLabels = useKindLabels();
   const d = useDerived();
-  const data = KINDS.map((k: Kind) => ({ kind: k, name: config.kindLabels[k], value: d.stats.kindCounts[k] ?? 0 })).filter((x) => x.value > 0);
+  const data = KINDS.map((k: Kind) => ({ kind: k, name: kindLabels[k], value: d.stats.kindCounts[k] ?? 0 })).filter((x) => x.value > 0);
   const total = data.reduce((a, x) => a + x.value, 0);
 
   // top tools overall (for the little list)

@@ -615,3 +615,15 @@ html[data-calm='true'] body::after {
 input[type='range'] {
   accent-color: var(--c-accent);
 }
+
+/* the settings drawer slides in from the right (no animation in calm mode / reduced motion) */
+.drawer-in {
+  animation: drawer-in calc(0.22s / var(--anim, 1)) ease-out;
+}
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateX(1.5rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-in { animation: none; }
+}
+:root[data-calm='true'] .drawer-in { animation: none; }

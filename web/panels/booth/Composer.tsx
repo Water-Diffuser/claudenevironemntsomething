@@ -41,11 +41,11 @@ export function Composer({ showStarters }: { showStarters: boolean }) {
           ))}
         </div>
       )}
-      <div className="flex items-end gap-2">
+      <div className="@container flex items-end gap-2">
         <textarea
           ref={box}
           rows={1}
-          className="field resize-none"
+          className="field min-w-0 flex-1 resize-none"
           value={text}
           disabled={!ready}
           placeholder={replaying ? 'Replaying the past. Press Live (in Playback) to chat again.' : ready ? `${producer}, what should we make? (Enter to send)` : 'Pick a project folder first…'}
@@ -60,11 +60,11 @@ export function Composer({ showStarters }: { showStarters: boolean }) {
         />
         {busy ? (
           <button className="btn btn-danger shrink-0" onClick={() => send({ t: 'stop' })} title="Interrupt Claude">
-            <Square size={15} fill="currentColor" /> Stop
+            <Square size={15} fill="currentColor" /> <span className="hidden @min-[15rem]:inline">Stop</span>
           </button>
         ) : (
           <button className="btn btn-primary shrink-0" disabled={!text.trim() || !ready} onClick={() => submit()}>
-            <Send size={15} /> Send
+            <Send size={15} /> <span className="hidden @min-[15rem]:inline">Send</span>
           </button>
         )}
       </div>

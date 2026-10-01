@@ -10,6 +10,8 @@
 //    * layouts    where each panel sits on the screen
 //    * features   switch whole panels / features on or off
 //    * limits     caps that keep big projects fast
+//    * hud        the numbers behind the meters and stars
+//    * audio      the generated music, tool-call notes and volumes
 //    * scan       which folders to skip when reading your project
 //    * languages  which languages the code analyzer understands
 //
@@ -81,6 +83,7 @@ const labels = {
   project: 'Kitchen',
   startSession: 'Start Session',
   sound: 'Sound',
+  settings: 'Mixing Desk',
 };
 
 // ---- the color code ---------------------------------------------------------
@@ -482,7 +485,7 @@ const scan = {
 
 // ---- languages the code analyzer understands -------------------------------
 // Each name must match a file in server/analysis/languages/ (added in the map stage).
-const languages = ['typescript', 'python'];
+const languages = ['typescript', 'python', 'go'];
 
 export const config = {
   app,

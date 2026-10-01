@@ -6,6 +6,7 @@ import { HudBar } from './components/HudBar';
 import { PermissionDialog } from './components/PermissionDialog';
 import { ProjectPicker } from './components/ProjectPicker';
 import { Setlist } from './components/Setlist';
+import { SettingsDrawer } from './settings/SettingsDrawer';
 import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
 import { Workspace } from './components/Workspace';
@@ -44,6 +45,7 @@ export default function App() {
             </div>
           )}
           <Workspace />
+          <SettingsDrawer />
         </div>
       </div>
       <PermissionDialog />

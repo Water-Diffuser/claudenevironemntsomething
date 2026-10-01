@@ -3,11 +3,10 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ShieldQuestion, X } from 'lucide-react';
-import { config } from '@config';
 import type { PermissionRequest } from '@shared/protocol';
 import { dur } from '../theme/motion';
 import { send, useApp } from '../state/store';
-import { useLabel } from '../state/settings';
+import { useLabel, useKindLabels } from '../state/settings';
 import { KindIcon, kindVar } from './KindIcon';
 import { ToolInput } from './ToolInput';
 
@@ -77,6 +76,7 @@ function QuestionBody({ req }: { req: PermissionRequest }) {
 }
 
 export function PermissionDialog() {
+  const kindLabels = useKindLabels();
   const pending = useApp((s) => s.pending);
   const label = useLabel('permission');
   const req = pending[0];
@@ -135,7 +135,7 @@ export function PermissionDialog() {
                   <div className="mb-2 flex items-center gap-2">
                     <span className="font-semibold">{req.tool}</span>
                     <span className="chip !py-0" style={{ color: kindVar(req.toolKind) }}>
-                      {config.kindLabels[req.toolKind]}
+                      {kindLabels[req.toolKind]}
                     </span>
                   </div>
                   {req.description && <p className="mb-2 text-sm text-dim">{req.description}</p>}

@@ -42,8 +42,8 @@ export function SoundControl() {
 
   if (!on) {
     return (
-      <button className="btn btn-primary !px-2.5 !py-1 text-xs" onClick={() => void useAudio.getState().start()} title="Turn the sound on. Nothing plays until you press this.">
-        <Volume2 size={14} /> {startLabel}
+      <button className="btn btn-primary !px-2.5 !py-1 text-xs" onClick={() => void useAudio.getState().start()} title={`${startLabel}: turn the sound on. Nothing plays until you press this.`} aria-label={startLabel}>
+        <Volume2 size={14} /> <span className="max-lg:hidden">{startLabel}</span>
       </button>
     );
   }

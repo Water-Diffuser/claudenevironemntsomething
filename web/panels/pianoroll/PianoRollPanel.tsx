@@ -8,7 +8,7 @@
 // ============================================================================
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Crosshair } from 'lucide-react';
-import { config } from '@config';
+import { useKindLabels } from '../../state/settings';
 import { fmtDuration } from '../../lib/format';
 import { mix, readThemeColors } from '../../lib/themeColors';
 import { useElementSize } from '../../lib/useElementSize';
@@ -28,6 +28,7 @@ interface Placed {
 }
 
 export default function PianoRollPanel() {
+  const kindLabels = useKindLabels();
   const { ref: boxRef, width, height } = useElementSize<HTMLDivElement>();
   const canvas = useRef<HTMLCanvasElement>(null);
   const themeRev = useThemeRev((s) => s.rev);
@@ -213,7 +214,7 @@ export default function PianoRollPanel() {
       />
       {tip && (
         <div className="pointer-events-none absolute z-10 max-w-[18rem] rounded-md border border-line bg-surface/95 px-2 py-1 text-xs shadow-lg" style={{ left: Math.min(tip.x + 12, width - 200), top: Math.max(4, tip.y - 44) }}>
-          <b>{tip.note.tool}</b> <span className="text-dim">{config.kindLabels[tip.note.kind]}</span>
+          <b>{tip.note.tool}</b> <span className="text-dim">{kindLabels[tip.note.kind]}</span>
           <div className="truncate font-mono text-dim">{tip.note.summary}</div>
           <div className="text-dim">
             {tip.note.end ? fmtDuration(tip.note.end - tip.note.start) : 'running…'}

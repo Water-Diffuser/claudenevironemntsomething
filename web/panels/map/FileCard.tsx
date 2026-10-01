@@ -1,7 +1,7 @@
 // A small card about the file you clicked: size, language, what Claude did to it, who imports it.
 import { useMemo } from 'react';
 import { Radar, Sparkles, X } from 'lucide-react';
-import { config } from '@config';
+import { useKindLabels } from '../../state/settings';
 import { kindVar } from '../../components/KindIcon';
 import { timeAgo } from '../../lib/format';
 import { askExplain } from '../../state/side';
@@ -10,6 +10,7 @@ import { useUI } from '../../state/ui';
 import { useScan } from '../../state/scan';
 
 export function FileCard({ path, onClose }: { path: string; onClose: () => void }) {
+  const kindLabels = useKindLabels();
   const d = useDerived();
   const files = useScan((s) => s.files);
   const analysisVersion = useScan((s) => s.analysisVersion);
@@ -58,7 +59,7 @@ export function FileCard({ path, onClose }: { path: string; onClose: () => void 
               <li key={i} className="flex items-center gap-2 text-xs">
                 <span className="inline-block size-2 rounded-full" style={{ background: kindVar(h.kind) }} />
                 <span className="font-semibold" style={{ color: kindVar(h.kind) }}>
-                  {config.kindLabels[h.kind]}
+                  {kindLabels[h.kind]}
                 </span>
                 <span className="text-dim">{h.tool}</span>
                 <span className="ml-auto text-dim">{timeAgo(h.ts)}</span>

@@ -1,7 +1,7 @@
 // A collapsible card for one tool call: icon, what it did, how long it took, and details on click.
 import { memo, useState } from 'react';
 import { Ban, Check, ChevronRight, Loader2, ShieldQuestion, Square, X } from 'lucide-react';
-import { config } from '@config';
+import { useKindLabels } from '../../state/settings';
 import { KindIcon, kindVar } from '../../components/KindIcon';
 import { Clamp, ToolInput } from '../../components/ToolInput';
 import type { ChatItem } from '../../state/derived';
@@ -27,6 +27,7 @@ function StatusIcon({ status }: { status: ToolItem['status'] }) {
 }
 
 export const ToolCard = memo(function ToolCard({ item }: { item: ToolItem }) {
+  const kindLabels = useKindLabels();
   const [open, setOpen] = useState(false);
   const color = kindVar(item.toolKind);
   return (
@@ -39,7 +40,7 @@ export const ToolCard = memo(function ToolCard({ item }: { item: ToolItem }) {
         <KindIcon kind={item.toolKind} tool={item.tool} />
         <span className="shrink-0 font-semibold">{item.tool}</span>
         <span className="chip shrink-0 !py-0" style={{ color, borderColor: `color-mix(in srgb, ${color} 50%, transparent)` }}>
-          {config.kindLabels[item.toolKind]}
+          {kindLabels[item.toolKind]}
         </span>
         <span className="min-w-0 flex-1 truncate font-mono text-[0.78rem] text-dim">{item.summary}</span>
         {item.durationMs !== undefined && item.status !== 'running' && <span className="shrink-0 text-xs text-dim">{fmtDuration(item.durationMs)}</span>}

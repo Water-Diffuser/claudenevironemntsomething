@@ -3,6 +3,9 @@ import { create } from 'zustand';
 import type { SymRef } from '../lib/codeGraph';
 
 interface UIState {
+  /** Is the settings drawer (theme editor etc.) open? */
+  settingsOpen: boolean;
+  openSettings: (open: boolean) => void;
   pickerOpen: boolean;
   openPicker: (open: boolean) => void;
   /** The file you clicked on the map/graph (other panels follow it). */
@@ -23,6 +26,8 @@ interface UIState {
 }
 
 export const useUI = create<UIState>((set) => ({
+  settingsOpen: false,
+  openSettings: (settingsOpen) => set({ settingsOpen }),
   pickerOpen: false,
   openPicker: (pickerOpen) => set({ pickerOpen }),
   selectedFile: null,

@@ -10,13 +10,12 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Crosshair, Pin } from 'lucide-react';
-import { config } from '@config';
 import type { Kind } from '@shared/events';
 import { kindVar } from '../../components/KindIcon';
 import { defineIndulgentTheme, languageFor, monaco } from '../../lib/monaco';
 import { readThemeColors } from '../../lib/themeColors';
 import { useFileContent } from '../../lib/useFileContent';
-import { useSettings } from '../../state/settings';
+import { useSettings, useKindLabels } from '../../state/settings';
 import { getView, useDerived } from '../../state/store';
 import { useUI } from '../../state/ui';
 import { resolveTheme } from '../../theme/applyTheme';
@@ -32,6 +31,7 @@ function freshness(now: number, ts: number, active: boolean): string {
 }
 
 export default function CodePanel() {
+  const kindLabels = useKindLabels();
   const d = useDerived();
   const selected = useUI((s) => s.selectedFile);
   const jumpTo = useUI((s) => s.jumpTo);
@@ -241,7 +241,7 @@ export default function CodePanel() {
           <span key={k} className="inline-flex items-center gap-1">
             <span className="inline-block h-2 w-1 rounded-sm" style={{ background: kindVar(k) }} />
             <span style={{ color: kindVar(k) }} className="font-semibold tracking-wide">
-              {config.kindLabels[k]}
+              {kindLabels[k]}
             </span>
           </span>
         ))}

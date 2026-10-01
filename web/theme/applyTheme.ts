@@ -18,6 +18,7 @@ export interface ThemeSettings {
     radius?: number;
     animSpeed?: number;
     effects?: Partial<Theme['effects']>;
+    dark?: boolean;
   };
 }
 
@@ -29,6 +30,7 @@ export function resolveTheme(ts: ThemeSettings): Theme {
   const o = ts.overrides ?? {};
   return {
     ...base,
+    dark: o.dark ?? base.dark,
     fontSize: o.fontSize ?? base.fontSize,
     radius: o.radius ?? base.radius,
     animSpeed: o.animSpeed ?? base.animSpeed,

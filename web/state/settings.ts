@@ -5,6 +5,7 @@
 // ============================================================================
 import { create } from 'zustand';
 import { config } from '@config';
+import type { Kind } from '@shared/events';
 import type { ColorCode, NamedLayout } from '@shared/types';
 import { defaultThemeSettings, type ThemeSettings } from '../theme/applyTheme';
 
@@ -23,6 +24,8 @@ export interface UISettings {
   theme: ThemeSettings;
   colorCode: Partial<ColorCode>;
   labels: Partial<Record<LabelKey, string>>;
+  /** Your own words for READ / SEARCHED / EDITED... (the color code legend). */
+  kindLabels: Partial<Record<Kind, string>>;
   /** Name of the layout currently shown. */
   layout: string;
   /** Layouts you edited or saved (these override the ones in the config, by name). */
@@ -46,6 +49,7 @@ export const defaultUI = (): UISettings => ({
   theme: defaultThemeSettings(),
   colorCode: {},
   labels: {},
+  kindLabels: {},
   layout: config.defaultLayout,
   customLayouts: {},
   hidden: [],
@@ -54,7 +58,7 @@ export const defaultUI = (): UISettings => ({
   dishes: {},
   calm: false,
   audio: { ...config.audio.volumes, muted: false },
-  sidebarOpen: true,
+  sidebarOpen: typeof window === 'undefined' || window.innerWidth >= 1100,
 });
 
 interface SettingsStore {
@@ -100,6 +104,12 @@ export const useSettings = create<SettingsStore>((set, get) => ({
 /** The label for something, honoring your renames. */
 export function useLabel(key: LabelKey): string {
   return useSettings((s) => s.ui.labels[key]) ?? config.labels[key];
+}
+
+/** The word for each color-code kind (READ, SEARCHED...), honoring your renames. */
+export function useKindLabels(): Record<Kind, string> {
+  const mine = useSettings((s) => s.ui.kindLabels);
+  return { ...config.kindLabels, ...mine };
 }
 
 /** Is this feature (panel) switched on? */
