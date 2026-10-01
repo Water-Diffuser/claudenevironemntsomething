@@ -207,8 +207,16 @@ export async function runRehearsal(ctx: RehearsalCtx): Promise<void> {
     });
   }
 
-  // --- Act 3: a pretend command ----------------------------------------------
-  if (ctx.permissionMode !== 'plan') await useTool('Bash', { command: 'ls -la', description: 'List the project folder' }, all.slice(0, 8).join('\n'), { ms: 500 });
+  // --- Act 3: a pretend new file, a pretend command, a pretend delete ------------
+  const note = 'notes/tasting-menu.md';
+  if (ctx.permissionMode !== 'plan') {
+    await say(`I'll also keep a short note file, \`${note}\`, so the next session knows what happened.`);
+    const abs = path.join(ctx.cwd, note);
+    const content = '# Tasting menu\n\n1. Look around\n2. One small change\n3. Run the checks\n';
+    await useTool('Write', { file_path: abs, content }, `File created successfully at: ${abs} (rehearsal: not really).`, { ms: 450, data: { type: 'create', filePath: abs, structuredPatch: [] } });
+    await useTool('Bash', { command: 'npm test', description: 'Run the checks' }, '> test\n\nAll checks passed.', { ms: 1800 });
+    await useTool('Bash', { command: `rm ${note}`, description: 'Remove the scratch note again' }, '', { ms: 500 });
+  }
 
   await useTool('TodoWrite', {
     todos: [

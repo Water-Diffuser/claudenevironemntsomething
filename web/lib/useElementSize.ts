@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-/** Measures an element and updates when the window is resized. */
+/**
+ * Measures an element and updates when it is resized.
+ * `ref` is a "callback ref": it works even if the element appears later (after a loading state).
+ * `el` is the element itself, once it exists.
+ */
 export function useElementSize<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
+  const [el, ref] = useState<T | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
-    const el = ref.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
@@ -13,6 +16,6 @@ export function useElementSize<T extends HTMLElement>() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-  return { ref, ...size };
+  }, [el]);
+  return { ref, el, ...size };
 }

@@ -4,6 +4,7 @@
 //  Node server. Both sides import these types so they can never disagree.
 // ============================================================================
 import type { Kind, SessionEvent } from './events.ts';
+import type { ProjectScan, ScanPatch } from './scan.ts';
 
 /** "live" talks to the real Claude Code. "rehearsal" plays a scripted fake session. */
 export type Mode = 'live' | 'rehearsal';
@@ -74,6 +75,10 @@ export type ServerMsg =
   | { t: 'permission_request'; req: PermissionRequest }
   | { t: 'permission_cleared'; requestId: string }
   | { t: 'sessions'; sessions: SessionInfo[] }
+  /** The whole project scan (sent when a project opens). */
+  | { t: 'scan'; scan: ProjectScan | null }
+  /** Incremental changes to the scan (files saved, analysis finished...). */
+  | { t: 'scan_patch'; patch: ScanPatch }
   | { t: 'error'; message: string };
 
 // ---- browser -> server ------------------------------------------------------

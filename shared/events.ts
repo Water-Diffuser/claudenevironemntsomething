@@ -80,6 +80,8 @@ export type SessionEventBody =
       error?: string;
     }
   | { kind: 'notice'; level: 'info' | 'warn' | 'error'; text: string }
+  /** A file changed on disk while Claude was working (catches edits made by shell commands). */
+  | { kind: 'fs_change'; path: string; change: 'add' | 'change' | 'unlink' }
   | { kind: 'interrupted' };
 
 export type SessionEvent = SessionEventBody & {

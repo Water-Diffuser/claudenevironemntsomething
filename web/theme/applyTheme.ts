@@ -6,6 +6,7 @@
 import { config } from '@config';
 import { KINDS, type Kind } from '@shared/events';
 import type { ColorCode, Theme } from '@shared/types';
+import { bumpThemeRev } from './themeRev';
 
 /** What gets saved in settings: a preset name plus any tweaks on top of it. */
 export interface ThemeSettings {
@@ -74,4 +75,5 @@ export function applyTheme(theme: Theme, colorCode: ColorCode, calm: boolean) {
   root.style.colorScheme = theme.dark ? 'dark' : 'light';
   motionState.speed = theme.animSpeed;
   motionState.calm = calm;
+  bumpThemeRev();
 }

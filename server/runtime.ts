@@ -18,6 +18,7 @@ import { EventMapper } from './claude/eventMapper';
 import { runLive } from './claude/live';
 import { runRehearsal } from './claude/rehearsal';
 import { describeTool, trimInput } from './claude/toolInfo';
+import { ProjectService, type FsChangeKind } from './analysis/project';
 import { deleteSessionFile, listStoredSessions, loadSession, loadSettings, saveSession, saveSettings } from './store/jsonStore';
 
 interface PendingPermission {
@@ -52,9 +53,15 @@ export class Runtime {
   private query: Query | null = null;
   private stopRequested = false;
 
-  /** Other parts of the server (scanner, watcher...) can listen for project changes. */
-  projectListeners: Array<(cwd: string | null) => void> = [];
-  /** ...and for every event, so they can react to Claude's tool calls. */
+  /** Scans the open project and watches it for changes. */
+  readonly project = new ProjectService(
+    (msg) => this.broadcast(msg),
+    (rel, change) => this.onFsChange(rel, change),
+  );
+  /** Files Claude's own tools touched recently (so the watcher doesn't double-report them). */
+  private recentToolPaths = new Map<string, number>();
+  private toolPathsById = new Map<string, string[]>();
+  /** Other parts of the server can listen to every event (e.g. to react to Claude's tool calls). */
   eventListeners: Array<(ev: SessionEvent) => void> = [];
 
   state: ServerState;
@@ -75,6 +82,7 @@ export class Runtime {
       busy: false,
       recentProjects: Array.isArray(saved.recentProjects) ? (saved.recentProjects as string[]).filter((p) => fs.existsSync(p)) : [],
     };
+    if (lastProject) void this.project.open(lastProject);
   }
 
   // ---- connections ----------------------------------------------------------
@@ -91,6 +99,7 @@ export class Runtime {
       this.handle(msg).catch((e) => this.send(ws, { t: 'error', message: String(e?.message ?? e) }));
     });
     this.send(ws, { t: 'hello', state: this.state, events: this.events, pending: [...this.pending.values()].map((p) => p.req), sessions: this.sessions });
+    if (this.project.scan) this.send(ws, { t: 'scan', scan: this.project.scan });
     void this.refreshSessions();
   }
 
@@ -143,6 +152,10 @@ export class Runtime {
     const ev = { ...body, seq: this.events.length, ts: Date.now() } as SessionEvent;
     this.events.push(ev);
     this.broadcast({ t: 'event', event: ev });
+    // Remember files Claude's own edit/create/delete tools touched, so the file watcher doesn't report them twice.
+    if (ev.kind === 'tool_start' && (ev.toolKind === 'edit' || ev.toolKind === 'create' || ev.toolKind === 'delete')) for (const p of ev.paths) this.recentToolPaths.set(p, ev.ts);
+    if (ev.kind === 'tool_end') for (const p of this.toolPathsById.get(ev.toolId) ?? []) this.recentToolPaths.set(p, ev.ts);
+    if (ev.kind === 'tool_start') this.toolPathsById.set(ev.toolId, ev.toolKind === 'edit' || ev.toolKind === 'create' || ev.toolKind === 'delete' ? ev.paths : []);
     for (const l of this.eventListeners) l(ev);
     this.schedulePersist();
   };
@@ -180,6 +193,14 @@ export class Runtime {
     });
   }
 
+  /** The file watcher saw a change. If Claude is working and none of its tools explains it (e.g. a shell command did it), log it. */
+  private onFsChange(rel: string, change: FsChangeKind) {
+    if (!this.state.busy) return;
+    const t = this.recentToolPaths.get(rel);
+    if (t && Date.now() - t < 5000) return;
+    this.emit({ kind: 'fs_change', path: rel, change });
+  }
+
   // ---- projects -------------------------------------------------------------
   async setProject(cwd: string) {
     if (this.state.busy) return this.fail('Press Stop (or wait) before changing project.');
@@ -191,7 +212,7 @@ export class Runtime {
     saveSettings({ lastProject: abs, recentProjects: this.state.recentProjects });
     this.resetLog([], null);
     this.sessionTitle = '';
-    for (const l of this.projectListeners) l(abs);
+    void this.project.open(abs);
     await this.refreshSessions();
   }
 
@@ -247,7 +268,7 @@ export class Runtime {
       if (stored.cwd !== this.state.cwd && fs.existsSync(stored.cwd)) {
         this.state.cwd = stored.cwd;
         saveSettings({ lastProject: stored.cwd });
-        for (const l of this.projectListeners) l(stored.cwd);
+        void this.project.open(stored.cwd);
       }
       this.resetLog(stored.events, stored.id);
       return;

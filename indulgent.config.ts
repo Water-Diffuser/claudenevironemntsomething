@@ -289,17 +289,32 @@ const defaultTheme = 'spoken-for';
 const grid = { cols: 24, rows: 24, margin: 10 };
 
 const layouts: Record<string, NamedLayout> = {
+  'control-room': {
+    label: 'Control Room',
+    items: [
+      { i: 'booth', x: 0, y: 0, w: 9, h: 24 },
+      { i: 'map', x: 9, y: 0, w: 15, h: 24 },
+    ],
+  },
+  'map-room': {
+    label: 'Map Room',
+    items: [
+      { i: 'map', x: 0, y: 0, w: 16, h: 24 },
+      { i: 'booth', x: 16, y: 0, w: 8, h: 24 },
+    ],
+  },
   focus: {
     label: 'Focus',
     items: [{ i: 'booth', x: 0, y: 0, w: 24, h: 24 }],
   },
 };
 
-const defaultLayout = 'focus';
+const defaultLayout = 'control-room';
 
 // ---- features (turn things off here, or in the settings drawer) ------------
 const features: Record<string, boolean> = {
   booth: true,
+  map: true,
 };
 
 // ---- performance caps -------------------------------------------------------
@@ -323,6 +338,12 @@ const scan = {
   ],
   maxFiles: 20000,
   maxFileBytes: 1_000_000,
+  /**
+   * Generated files (lockfiles, minified bundles) can be huge but tell you nothing.
+   * On the map they are drawn no bigger than `generatedMaxLines`.
+   */
+  generatedPatterns: ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'Cargo.lock', 'poetry.lock', 'Gemfile.lock', 'composer.lock', '*.min.js', '*.min.css', '*.map'],
+  generatedMaxLines: 120,
 };
 
 // ---- languages the code analyzer understands -------------------------------

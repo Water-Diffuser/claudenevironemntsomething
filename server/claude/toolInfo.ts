@@ -50,6 +50,23 @@ function deletedPaths(command: string): string[] {
   return found;
 }
 
+/**
+ * Claude often reads and searches through the shell (`cat file`, `grep -r foo src`).
+ * Recognise the simple cases so they light up the map as READ / SEARCHED, not just "ran something".
+ */
+function classifyShellRead(command: string): { kind: Kind; paths: string[] } | null {
+  const first = command.split(/&&|\|\||;|\n|\|/)[0].trim();
+  if (/(^|\s)>{1,2}\s*\S/.test(first)) return null; // writes to a file: it's a real command
+  const words = shellWords(first);
+  const cmd = words[0];
+  const args = words.slice(1).filter((w) => !w.startsWith('-'));
+  if (['cat', 'head', 'tail', 'less', 'more', 'bat', 'nl', 'wc'].includes(cmd)) return { kind: 'read', paths: args };
+  if (['ls', 'tree', 'stat', 'file'].includes(cmd)) return args.length ? { kind: 'read', paths: args } : null; // a bare `ls` touches nothing in particular
+  if (['grep', 'rg', 'ag', 'ack'].includes(cmd)) return { kind: 'search', paths: args.slice(1) }; // first arg is the pattern
+  if (['find', 'fd'].includes(cmd)) return { kind: 'search', paths: args.slice(0, 1).filter((a) => !a.includes('*')) };
+  return null;
+}
+
 export function describeTool(tool: string, input: Record<string, unknown>, cwd: string): ToolDescription {
   const rel = (p: unknown) => relPath(cwd, str(p));
   let kind: Kind = config.toolKinds[tool] ?? 'other';
@@ -97,6 +114,8 @@ export function describeTool(tool: string, input: Record<string, unknown>, cwd: 
       if (del.length) {
         return { kind: 'delete', paths: del.map((d) => relPath(cwd, d)), summary: command.split('\n')[0] };
       }
+      const shellRead = classifyShellRead(command);
+      if (shellRead) return { kind: shellRead.kind, paths: shellRead.paths.map((p) => relPath(cwd, p)), summary: command.split('\n')[0] };
       return { kind: 'run', paths: [], summary: str(input.description) || command.split('\n')[0] };
     }
     case 'TodoWrite':

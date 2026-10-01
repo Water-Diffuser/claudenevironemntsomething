@@ -11,6 +11,7 @@ import { config } from '@config';
 import type { SessionEvent } from '@shared/events';
 import type { ClientMsg, PermissionRequest, ServerMsg, ServerState, SessionInfo } from '@shared/protocol';
 import { applyEvent, computeDerived, emptyDerived, type Derived } from './derived';
+import { useScan } from './scan';
 
 export interface Toast {
   id: number;
@@ -103,6 +104,12 @@ export const useApp = create<AppStore>((set, get) => ({
       case 'sessions':
         set({ sessions: msg.sessions });
         return;
+      case 'scan':
+        useScan.getState().setScan(msg.scan);
+        return;
+      case 'scan_patch':
+        useScan.getState().applyPatch(msg.patch);
+        return;
       case 'error':
         get().toast(msg.message, 'error');
         return;
@@ -110,10 +117,32 @@ export const useApp = create<AppStore>((set, get) => ({
   },
 }));
 
-/** Subscribe a component to live updates and get the current view. */
+// ---- replay view ----------------------------------------------------------------
+// When you scrub the replay slider, panels show an OLDER version of the session.
+// Every panel reads through useDerived()/getView(), so they all follow automatically.
+interface ViewStore {
+  replay: { derived: Derived; /** time of the replayed moment */ now: number; /** events applied */ index: number } | null;
+}
+export const useView = create<ViewStore>(() => ({ replay: null }));
+
+/** What panels should show: the live state, or the replayed moment. (For React components.) */
 export function useDerived(): Derived {
   useApp((s) => s.rev);
-  return useApp.getState().derived;
+  const replay = useView((s) => s.replay);
+  return replay ? replay.derived : useApp.getState().derived;
+}
+
+/** Same thing for non-React code (canvas loops): the view data and the "clock" to fade glows against. */
+export function getView(): { derived: Derived; now: number; replaying: boolean } {
+  const r = useView.getState().replay;
+  return { derived: r?.derived ?? useApp.getState().derived, now: r?.now ?? Date.now(), replaying: !!r };
+}
+
+/** Call `fn` whenever the live data or the replay position changes. Returns an unsubscribe function. */
+export function subscribeView(fn: () => void): () => void {
+  const a = useApp.subscribe((s, p) => s.rev !== p.rev && fn());
+  const b = useView.subscribe(fn);
+  return () => (a(), b());
 }
 
 // ---- sending messages to the server --------------------------------------------
