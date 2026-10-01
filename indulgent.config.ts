@@ -317,10 +317,25 @@ const layouts: Record<string, NamedLayout> = {
   studio: {
     label: 'Studio',
     items: [
-      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
-      { i: 'diff', x: 7, y: 0, w: 17, h: 10 },
-      { i: 'code', x: 7, y: 10, w: 17, h: 10 },
-      { i: 'replay', x: 7, y: 20, w: 17, h: 4 },
+      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
+      { i: 'pianoroll', x: 6, y: 0, w: 18, h: 8 },
+      { i: 'diff', x: 6, y: 8, w: 12, h: 12 },
+      { i: 'pitch', x: 18, y: 8, w: 6, h: 6 },
+      { i: 'heartbeat', x: 18, y: 14, w: 6, h: 6 },
+      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
+    ],
+  },
+  'green-room': {
+    label: 'Green Room',
+    items: [
+      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
+      { i: 'menu', x: 6, y: 0, w: 6, h: 12 },
+      { i: 'dishes', x: 12, y: 0, w: 7, h: 12 },
+      { i: 'stats', x: 19, y: 0, w: 5, h: 12 },
+      { i: 'donut', x: 6, y: 12, w: 6, h: 8 },
+      { i: 'pitch', x: 12, y: 12, w: 7, h: 8 },
+      { i: 'heartbeat', x: 19, y: 12, w: 5, h: 8 },
+      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
     ],
   },
   'test-kitchen': {
@@ -367,6 +382,15 @@ const features: Record<string, boolean> = {
   trails: true,
   git: true,
   replay: true,
+  menu: true,
+  dishes: true,
+  pianoroll: true,
+  pitch: true,
+  heartbeat: true,
+  donut: true,
+  stats: true,
+  /** The strip of meters (Fullness, The Tab, stars) and the avatar under the top bar. */
+  hud: true,
 };
 
 // ---- performance caps -------------------------------------------------------
@@ -385,6 +409,17 @@ const limits = {
   graphMaxFunctionNodes: 260,
   /** Edges are thinned to this many (keeping the ones Claude touched and the strongest). */
   graphMaxEdges: 900,
+};
+
+// ---- the HUD (the game-style meters across the top) ------------------------------
+const hud = {
+  /** The Tab meter fills up as the cost approaches this many US dollars (a "budget" for the session). */
+  tabBudgetUsd: 1,
+  /** Michelin stars: you earn one star for every this-many menu items (todos) Claude finishes. Max 3 stars. */
+  itemsPerStar: 3,
+  /** The Fullness bar turns warm and then red at these fractions of the context window. */
+  fullnessWarn: 0.7,
+  fullnessDanger: 0.9,
 };
 
 // ---- which files the project scanner skips ----------------------------------
@@ -422,6 +457,7 @@ export const config = {
   defaultLayout,
   features,
   limits,
+  hud,
   scan,
   languages,
 };

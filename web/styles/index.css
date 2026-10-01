@@ -566,3 +566,47 @@ html[data-calm='true'] body::after {
 }
 /* A line jumped to from a stack frame (code view). */
 .deco-jump { background: color-mix(in srgb, var(--c-bad) 30%, transparent); box-shadow: inset 3px 0 0 var(--c-bad); }
+
+/* ---- 10. The Voice (avatar) ------------------------------------------------------- */
+:root { --hud-h: 3.1rem; }
+.avatar {
+  overflow: visible;
+  filter: drop-shadow(0 0 calc(var(--fx-glow) * 9px) color-mix(in srgb, var(--c-accent) 70%, transparent));
+  animation: avatar-float 3.4s ease-in-out infinite;
+}
+@keyframes avatar-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+/* which face parts show in which mood */
+.avatar .eyes > g, .avatar .mouths > *, .avatar .thought, .avatar .sparkles, .avatar .blush, .avatar .halo { display: none; }
+.avatar .halo { display: block; opacity: 0.25; }
+.avatar-idle .eyes-open, .avatar-thinking .eyes-open { display: block; }
+.avatar-working .eyes-narrow { display: block; }
+.avatar-done .eyes-happy { display: block; }
+.avatar-glitching .eyes-x { display: block; }
+.avatar-idle .mouth-idle { display: block; }
+.avatar-thinking .mouth-think { display: block; }
+.avatar-working .mouth-wave { display: block; }
+.avatar-done .mouth-done { display: block; }
+.avatar-glitching .mouth-glitch { display: block; }
+.avatar-idle .blush, .avatar-thinking .blush, .avatar-working .blush, .avatar-done .blush { display: block; }
+.avatar-thinking .thought { display: block; animation: avatar-thought 1.4s ease-in-out infinite; }
+.avatar-done .sparkles { display: block; }
+/* mood animations */
+.avatar-idle .eyes-open { animation: avatar-blink 4.6s infinite; transform-origin: 50px 50px; }
+@keyframes avatar-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+.avatar-thinking .eyes-open { transform: translate(-2.5px, -3px); }
+@keyframes avatar-thought { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+.avatar-working .halo { opacity: 0.9; transform-origin: 50px 52px; animation: avatar-spin 3.2s linear infinite; }
+@keyframes avatar-spin { to { transform: rotate(360deg); } }
+.avatar-working .bar { transform-box: fill-box; transform-origin: center; animation: avatar-bar 0.45s ease-in-out infinite alternate; }
+@keyframes avatar-bar { from { transform: scaleY(0.25); } to { transform: scaleY(1.2); } }
+.avatar .spark { transform-box: fill-box; transform-origin: center; animation: avatar-spark 1.6s ease-out both; }
+@keyframes avatar-spark { 0% { transform: scale(0) rotate(0); opacity: 1; } 60% { opacity: 1; } 100% { transform: scale(1.6) rotate(90deg); opacity: 0; } }
+.avatar-glitching {
+  animation: avatar-glitch 0.32s steps(2) infinite;
+  filter: drop-shadow(calc(var(--fx-glitch) * 3px) 0 var(--c-bad)) drop-shadow(calc(var(--fx-glitch) * -3px) 0 var(--c-good));
+}
+@keyframes avatar-glitch {
+  0% { transform: translate(calc(var(--fx-glitch) * 2px), 0) skewX(0deg); }
+  50% { transform: translate(calc(var(--fx-glitch) * -3px), calc(var(--fx-glitch) * 1px)) skewX(calc(var(--fx-glitch) * 4deg)); }
+  100% { transform: translate(0, calc(var(--fx-glitch) * -1px)); }
+}

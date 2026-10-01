@@ -11,6 +11,7 @@ import { config } from '@config';
 import type { SessionEvent } from '@shared/events';
 import type { ClientMsg, PermissionRequest, ServerMsg, ServerState, SessionInfo } from '@shared/protocol';
 import { applyEvent, computeDerived, emptyDerived, type Derived } from './derived';
+import { evaluateDishes } from './dishes';
 import { useGit } from './git';
 import { useScan } from './scan';
 import { useSide } from './side';
@@ -75,17 +76,20 @@ export const useApp = create<AppStore>((set, get) => ({
     switch (msg.t) {
       case 'hello':
         set({ server: msg.state, events: msg.events, derived: computeDerived(msg.events), pending: msg.pending, sessions: msg.sessions, rev: get().rev + 1 });
+        evaluateDishes(get().derived, false); // opening an old session earns its dishes quietly
         return;
       case 'events_reset':
         // (a different session: any replay of the old one no longer makes sense)
         useView.setState({ replay: null });
         set({ events: msg.events, derived: computeDerived(msg.events), rev: get().rev + 1 });
+        evaluateDishes(get().derived, false);
         return;
       case 'event': {
         const { events, derived } = get();
         if (msg.event.seq < events.length) return; // already have it (guards against double delivery)
         events.push(msg.event);
         applyEvent(derived, msg.event);
+        evaluateDishes(derived, true); // a new dish? (toast + trophy)
         bump();
         return;
       }

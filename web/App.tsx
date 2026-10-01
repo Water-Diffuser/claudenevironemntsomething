@@ -1,6 +1,8 @@
 // The app shell: top bar, setlist sidebar, panel grid, and the popups.
 import { useEffect, useMemo } from 'react';
 import { MotionConfig } from 'framer-motion';
+import { DishToasts } from './components/DishToasts';
+import { HudBar } from './components/HudBar';
 import { PermissionDialog } from './components/PermissionDialog';
 import { ProjectPicker } from './components/ProjectPicker';
 import { Setlist } from './components/Setlist';
@@ -8,7 +10,7 @@ import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
 import { Workspace } from './components/Workspace';
 import { connect, useApp } from './state/store';
-import { useSettings } from './state/settings';
+import { isFeatureOn, useSettings } from './state/settings';
 import { applyTheme, resolveColorCode, resolveTheme } from './theme/applyTheme';
 
 export default function App() {
@@ -31,6 +33,7 @@ export default function App() {
     <MotionConfig reducedMotion={ui.calm ? 'always' : 'user'}>
       <div className="flex h-full flex-col">
         <TopBar />
+        {isFeatureOn(ui, 'hud') && <HudBar />}
         {conn === 'closed' && (
           <div className="bg-bad/15 px-3 py-1 text-center text-sm text-bad">Can't reach the backend. Is `npm start` still running? Retrying…</div>
         )}
@@ -46,6 +49,7 @@ export default function App() {
       <PermissionDialog />
       <ProjectPicker />
       <Toasts />
+      <DishToasts />
     </MotionConfig>
   );
 }

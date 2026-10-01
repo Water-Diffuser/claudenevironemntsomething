@@ -149,6 +149,30 @@ export interface Flash {
   paths: string[];
 }
 
+/** One tool call as a "note" on the piano roll. */
+export interface CallNote {
+  id: string;
+  tool: string;
+  kind: Kind;
+  start: number;
+  /** undefined while the call is still running. */
+  end?: number;
+  /** The folder this call worked in (the note's row), or "shell" / "web" / "misc". */
+  lane: string;
+  /** What it did, in a few words (e.g. the file path or command). */
+  summary: string;
+  ok?: boolean;
+}
+
+/** One point on the pitch curve (token usage over time). */
+export interface TokenPoint {
+  ts: number;
+  /** Tokens in the context window at this moment. */
+  context: number;
+  /** Output tokens written so far (cumulative). */
+  output: number;
+}
+
 /** What Claude is doing right now (drives the avatar and heartbeat later). */
 export type Phase = 'idle' | 'thinking' | 'working' | 'done' | 'error';
 
@@ -161,6 +185,8 @@ export interface Derived {
   /** Text that is streaming in right now (not yet a finished message). */
   live: { messageId: string; text: string } | null;
   phase: Phase;
+  /** When the phase last changed to done/error (the avatar celebrates / glitches for a few seconds). */
+  phaseTs: number;
   busy: boolean;
   todos: TodoItem[];
   sessionId: string | null;
@@ -190,6 +216,27 @@ export interface Derived {
   errors: ErrorRecord[];
   /** Files to flash because an error pointed at them. */
   flashes: Flash[];
+  /** Every tool call, as notes for the piano roll (capped). */
+  calls: CallNote[];
+  /** Token usage over time, for the pitch curve (capped). */
+  series: TokenPoint[];
+  /** Numbers for the stats card and the donut. */
+  stats: {
+    filesChanged: Set<string>;
+    commands: number;
+    errors: number;
+    toolCounts: Record<string, number>;
+    kindCounts: Partial<Record<Kind, number>>;
+    firstTs: number | null;
+    lastTs: number;
+  };
+  /** Failed tool calls in a row (reset by any success). */
+  streak: { current: number; max: number };
+  /** Menu items Claude finished (by name), and how many takes finished OK (for the Michelin stars). */
+  served: Set<string>;
+  turnsOk: number;
+  testsPassed: boolean;
+  committed: boolean;
   /** Files created during the session so far (replay hides the ones that don't exist yet at the chosen moment). */
   created: Set<string>;
   /** The tests seen in the most recent test run (so the next run can show them as "running"). */
@@ -203,6 +250,7 @@ export function emptyDerived(): Derived {
     toolIndex: new Map(),
     live: null,
     phase: 'idle',
+    phaseTs: 0,
     busy: false,
     todos: [],
     sessionId: null,
@@ -220,6 +268,14 @@ export function emptyDerived(): Derived {
     errors: [],
     flashes: [],
     created: new Set(),
+    calls: [],
+    series: [],
+    stats: { filesChanged: new Set(), commands: 0, errors: 0, toolCounts: {}, kindCounts: {}, firstTs: null, lastTs: 0 },
+    streak: { current: 0, max: 0 },
+    served: new Set(),
+    turnsOk: 0,
+    testsPassed: false,
+    committed: false,
     lastTests: [],
   };
 }
@@ -295,6 +351,8 @@ function deactivateAll(d: Derived) {
 export function applyEvent(d: Derived, e: SessionEvent): void {
   d.count++;
   const id = `e${e.seq}`;
+  if (d.stats.firstTs === null) d.stats.firstTs = e.ts;
+  d.stats.lastTs = e.ts;
   switch (e.kind) {
     case 'session_start':
       d.sessionId = e.sessionId;
@@ -336,6 +394,16 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
       d.running.set(e.toolId, e.toolKind);
       const written = typeof e.input.content === 'string' ? e.input.content.split('\n').length : undefined;
       for (const p of e.paths) touch(d, p, e.toolKind, e.ts, true, { tool: e.tool, toolId: e.toolId, lines: e.toolKind === 'create' ? written : undefined });
+      // Notes for the piano roll, and counters for the donut/stats.
+      {
+        const first = e.paths[0] ?? '';
+        const lane = first && first !== '.' ? (first.includes('/') ? first.split('/')[0] : '(root)') : e.tool === 'Bash' ? 'shell' : /^Web/.test(e.tool) ? 'web' : 'misc';
+        d.calls.push({ id: e.toolId, tool: e.tool, kind: e.toolKind, start: e.ts, lane, summary: e.summary });
+        if (d.calls.length > 1500) d.calls.shift();
+        d.stats.toolCounts[e.tool] = (d.stats.toolCounts[e.tool] ?? 0) + 1;
+        d.stats.kindCounts[e.toolKind] = (d.stats.kindCounts[e.toolKind] ?? 0) + 1;
+        if (e.tool === 'Bash') d.stats.commands++;
+      }
       // A shell command: start tracking it as a "run" (tests, build...).
       if (e.tool === 'Bash' && typeof e.input.command === 'string') {
         d.runs.push({
@@ -371,6 +439,7 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
     case 'fs_change': {
       const kind: Kind = e.change === 'add' ? 'create' : e.change === 'unlink' ? 'delete' : 'edit';
       if (e.change === 'add') d.created.add(e.path);
+      d.stats.filesChanged.add(e.path);
       touch(d, e.path, kind, e.ts, false, { tool: 'shell', toolId: id });
       break;
     }
@@ -399,6 +468,18 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
       }
       if (item?.type === 'tool') finishRun(d, item, e);
       if (item?.type === 'tool' && item.toolKind === 'create' && e.ok && item.paths[0]) d.created.add(item.paths[0]);
+      // finish the piano-roll note, and keep the error streak / files-changed counters
+      {
+        const note = [...d.calls].reverse().find((n) => n.id === e.toolId);
+        if (note) (note.end = e.ts), (note.ok = e.ok);
+        const denied = item?.type === 'tool' && item.status === 'denied';
+        if (!denied) {
+          if (e.ok) d.streak.current = 0;
+          else (d.streak.current++, d.stats.errors++, (d.streak.max = Math.max(d.streak.max, d.streak.current)));
+        }
+        if (item?.type === 'tool' && e.ok && (item.toolKind === 'edit' || item.toolKind === 'create' || item.toolKind === 'delete')) for (const p of item.paths) d.stats.filesChanged.add(p);
+        if (item?.type === 'tool' && e.ok && item.tool === 'Bash' && /git\s+commit/.test(String(item.input.command ?? ''))) d.committed = true;
+      }
       // Replace the provisional region with the real one, and record edits for the diff view.
       if (item?.type === 'tool') finishRegions(d, item, e);
       // Files a search found (Grep/Glob results) light up as SEARCHED.
@@ -407,13 +488,16 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
     }
     case 'usage':
       d.usage = { ...d.usage, contextTokens: e.contextTokens, outputTokens: d.usage.outputTokens + e.outputTokens };
+      d.series.push({ ts: e.ts, context: e.contextTokens, output: d.usage.outputTokens });
+      if (d.series.length > 800) d.series.splice(0, d.series.length - 800);
       break;
     case 'todos':
       d.todos = e.items;
+      for (const t of e.items) if (t.status === 'completed') d.served.add(t.content);
       break;
     case 'notice':
       d.chat.push({ type: 'notice', id, level: e.level, text: e.text, ts: e.ts });
-      if (e.level === 'error') d.phase = 'error';
+      if (e.level === 'error') (d.phase = 'error'), (d.phaseTs = e.ts);
       break;
     case 'turn_end':
       stopUnfinishedTools(d);
@@ -422,6 +506,8 @@ export function applyEvent(d: Derived, e: SessionEvent): void {
       d.busy = false;
       d.live = null;
       d.phase = e.ok ? 'done' : 'error';
+      if (e.ok) d.turnsOk++;
+      d.phaseTs = e.ts;
       d.usage = { ...d.usage, costUsd: d.usage.costUsd + e.costUsd, contextWindow: e.contextWindow ?? d.usage.contextWindow };
       break;
     case 'interrupted':
@@ -461,6 +547,7 @@ function finishRun(d: Derived, item: Extract<ChatItem, { type: 'tool' }>, e: Ext
     if (tests) {
       run.tests = tests;
       run.ok = e.ok && tests.failed === 0;
+      if (tests.failed === 0 && tests.passed > 0) d.testsPassed = true;
       d.lastTests = tests.cases.map((c) => ({ ...c, error: undefined }));
       for (const c of tests.cases.filter((x) => x.status === 'fail').slice(0, 20)) {
         addError(d, { id: `err-${run.id}-${c.id}`, ts: e.ts, source: 'test', title: c.suite ? `${c.suite} › ${c.name}` : c.name, message: c.error?.message ?? 'test failed', frames: c.error?.frames ?? [], runId: run.id });

@@ -24,6 +24,8 @@ export interface UISettings {
   extraPanels: string[];
   /** Feature switches you changed (on top of config.features). */
   features: Record<string, boolean>;
+  /** Dishes (achievements) you have earned: id -> when. */
+  dishes: Record<string, number>;
   /** Calm mode: no flashing, no glitch. */
   calm: boolean;
   sidebarOpen: boolean;
@@ -38,6 +40,7 @@ export const defaultUI = (): UISettings => ({
   hidden: [],
   extraPanels: [],
   features: {},
+  dishes: {},
   calm: false,
   sidebarOpen: true,
 });
