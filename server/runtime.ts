@@ -13,14 +13,17 @@ import type WebSocket from 'ws';
 import { getSessionMessages, listSessions, type CanUseTool, type PermissionResult, type Query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { config } from '@config';
 import type { SessionEvent, SessionEventBody } from '@shared/events';
+import { EFFORT_LEVELS, clampEffort, effortsFor, isDefaultModel, type EffortLevel, type ThinkingChoice } from '@shared/models';
 import type { ClientMsg, Mode, PermissionModeName, PermissionRequest, Question, ServerMsg, ServerState, SessionInfo } from '@shared/protocol';
 import { EventMapper } from './claude/eventMapper';
 import { runLive } from './claude/live';
+import { fetchLiveInfo } from './claude/models';
 import { runRehearsal } from './claude/rehearsal';
 import { describeTool, trimInput } from './claude/toolInfo';
 import { runSide } from './claude/side';
 import { ProjectService, type FsChangeKind } from './analysis/project';
 import { GitService } from './git/gitService';
+import { TerminalService } from './terminal';
 import { deleteSessionFile, listStoredSessions, loadSession, loadSettings, saveSession, saveSettings } from './store/jsonStore';
 
 interface PendingPermission {
@@ -66,6 +69,8 @@ export class Runtime {
   );
   /** Reads the project's git history and working-tree changes. */
   readonly git = new GitService((msg) => this.broadcast(msg));
+  /** Runs the commands you type in the Terminal panel. */
+  readonly terminal = new TerminalService((msg) => this.broadcast(msg));
   /** Remember each Bash command until its result arrives. */
   private bashCommands = new Map<string, string>();
   /** Files Claude's own tools touched recently (so the watcher doesn't double-report them). */
@@ -83,11 +88,22 @@ export class Runtime {
     const wanted = (forced ?? (saved.mode as Mode | undefined) ?? config.app.defaultMode) as Mode | 'auto';
     const mode: Mode = wanted === 'auto' ? (liveAvailable ? 'live' : 'rehearsal') : wanted;
     const lastProject = typeof saved.lastProject === 'string' && fs.existsSync(saved.lastProject) ? saved.lastProject : null;
+    // The model / effort / thinking you picked last time (or the config's starting values).
+    const models = config.models.fallback;
+    const savedModel = typeof saved.model === 'string' ? saved.model : config.models.defaultModel;
+    const model = isDefaultModel(savedModel) ? null : savedModel;
+    const savedEffort = EFFORT_LEVELS.includes(saved.effort as EffortLevel) ? (saved.effort as EffortLevel) : config.models.defaultEffort;
     this.state = {
       cwd: lastProject,
       mode,
       liveAvailable,
       permissionMode: (saved.permissionMode as PermissionModeName) ?? 'default',
+      model,
+      effort: clampEffort(effortsFor(models, model), savedEffort),
+      thinking: saved.thinking === 'off' ? 'off' : saved.thinking === 'auto' ? 'auto' : config.models.defaultThinking,
+      models,
+      modelsSource: 'fallback',
+      commands: config.commands.fallback,
       sessionId: null,
       busy: false,
       recentProjects: Array.isArray(saved.recentProjects) ? (saved.recentProjects as string[]).filter((p) => fs.existsSync(p)) : [],
@@ -95,6 +111,7 @@ export class Runtime {
     if (lastProject) {
       void this.project.open(lastProject);
       void this.git.open(lastProject);
+      void this.loadModels();
       // Re-open the session you were in (so a restart or a crash doesn't lose your place).
       const last = typeof saved.lastSession === 'string' ? loadSession(saved.lastSession) : null;
       if (last && last.cwd === lastProject) {
@@ -106,6 +123,54 @@ export class Runtime {
         this.sessionIsRehearsal = last.rehearsal;
       }
     }
+  }
+
+  // ---- models, effort, thinking ------------------------------------------------
+  private modelsLoading = false;
+
+  /** In Live mode, ask Claude which models this account can use. (Rehearsal keeps the config list.) */
+  async loadModels() {
+    const cwd = this.state.cwd;
+    if (this.state.mode !== 'live' || !this.state.liveAvailable || !cwd || this.modelsLoading) return;
+    this.modelsLoading = true;
+    try {
+      const { models: list, commands } = await fetchLiveInfo(cwd);
+      this.state.models = list;
+      this.state.modelsSource = 'claude';
+      this.state.commands = commands;
+      // Your saved choice might not exist on this account any more: fall back to Default instead of failing every message.
+      if (this.state.model && !list.some((m) => m.value === this.state.model)) this.state.model = null;
+      this.state.effort = clampEffort(effortsFor(list, this.state.model), this.state.effort);
+      saveSettings({ model: this.state.model, effort: this.state.effort });
+    } catch {
+      // Not logged in yet, or Claude did not answer: keep showing the config list.
+      this.state.models = config.models.fallback;
+      this.state.modelsSource = 'fallback';
+      this.state.commands = config.commands.fallback;
+    } finally {
+      this.modelsLoading = false;
+      this.pushState();
+    }
+  }
+
+  private setModel(model: string | null) {
+    this.state.model = isDefaultModel(model) ? null : model;
+    // A model that does not accept your effort level gets the closest one it does accept.
+    this.state.effort = clampEffort(effortsFor(this.state.models, this.state.model), this.state.effort);
+    saveSettings({ model: this.state.model, effort: this.state.effort });
+    this.pushState();
+  }
+
+  private setEffort(effort: EffortLevel | null) {
+    this.state.effort = clampEffort(effortsFor(this.state.models, this.state.model), effort);
+    saveSettings({ effort: this.state.effort });
+    this.pushState();
+  }
+
+  private setThinking(thinking: ThinkingChoice) {
+    this.state.thinking = thinking === 'off' ? 'off' : 'auto';
+    saveSettings({ thinking: this.state.thinking });
+    this.pushState();
   }
 
   // ---- connections ----------------------------------------------------------
@@ -157,11 +222,25 @@ export class Runtime {
         if (this.state.busy) return this.fail('Wait for the current take to finish (or press Stop) before switching modes.');
         this.state.mode = msg.mode;
         saveSettings({ mode: msg.mode });
+        // Rehearsal shows the config list; Live asks Claude for the real one.
+        if (msg.mode === 'rehearsal') {
+          this.state.models = config.models.fallback;
+          this.state.modelsSource = 'fallback';
+          this.state.commands = config.commands.fallback;
+        } else void this.loadModels();
         return this.pushState();
       case 'set_permission_mode':
         this.state.permissionMode = msg.mode;
         saveSettings({ permissionMode: msg.mode });
         return this.pushState();
+      case 'set_model':
+        return this.setModel(msg.model);
+      case 'set_effort':
+        return this.setEffort(msg.effort);
+      case 'set_thinking':
+        return this.setThinking(msg.thinking);
+      case 'refresh_models':
+        return this.loadModels();
       case 'refresh_sessions':
         return this.refreshSessions();
       case 'side':
@@ -169,6 +248,11 @@ export class Runtime {
       case 'side_cancel':
         this.sides.get(msg.id)?.abort();
         return;
+      case 'term_run':
+        if (!this.state.cwd) return this.fail('Pick a project first.');
+        return this.terminal.run(String(msg.id), String(msg.command), this.state.cwd);
+      case 'term_kill':
+        return this.terminal.kill(String(msg.id));
     }
   }
 
@@ -250,6 +334,7 @@ export class Runtime {
 
   /** Save the current session right now (called on shutdown). */
   flush() {
+    this.terminal.killAll();
     this.persist();
   }
 
@@ -283,6 +368,7 @@ export class Runtime {
     const abs = path.resolve(cwd);
     if (!fs.existsSync(abs) || !fs.statSync(abs).isDirectory()) return this.fail(`That folder does not exist: ${abs}`);
     this.persist();
+    this.terminal.killAll(); // commands started in the old project should not keep running
     this.state.cwd = abs;
     this.state.recentProjects = [abs, ...this.state.recentProjects.filter((p) => p !== abs)].slice(0, 8);
     saveSettings({ lastProject: abs, recentProjects: this.state.recentProjects });
@@ -290,6 +376,7 @@ export class Runtime {
     this.sessionTitle = '';
     void this.project.open(abs);
     void this.git.open(abs);
+    void this.loadModels(); // the list can differ per project (its own settings files can narrow it)
     await this.refreshSessions();
   }
 
@@ -423,13 +510,16 @@ export class Runtime {
 
     try {
       if (rehearsal) {
-        await runRehearsal({ cwd, prompt, sessionId: this.sessionKey!, signal: abort.signal, permissionMode: this.state.permissionMode, canUseTool, push });
+        await runRehearsal({ cwd, prompt, sessionId: this.sessionKey!, signal: abort.signal, permissionMode: this.state.permissionMode, model: this.state.model, effort: this.state.effort, thinking: this.state.thinking, canUseTool, push });
       } else {
         await runLive({
           cwd,
           prompt,
           resumeId: this.sessionKey,
           permissionMode: this.state.permissionMode,
+          model: this.state.model,
+          effort: this.state.effort,
+          thinking: this.state.thinking,
           abort,
           canUseTool,
           onQuery: (q) => (this.query = q),

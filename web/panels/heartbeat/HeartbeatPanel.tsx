@@ -134,10 +134,10 @@ export default function HeartbeatPanel() {
       <canvas ref={canvas} className="absolute left-0 top-0" style={{ width, height }} aria-label={`Heartbeat monitor: ${LABEL[mood]}`} role="img" />
       <div className="pointer-events-none absolute left-3 top-2 flex items-center gap-1.5">
         <Heart size={18} className={mood === 'working' ? 'animate-pulse text-accent' : 'text-accent'} fill="currentColor" />
-        <span ref={bpmShown} className="font-mono text-2xl font-bold leading-none text-accent-2 glow-text">
+        <span ref={bpmShown} className="font-mono text-2xl font-semibold leading-none text-ink">
           {BPM[mood]}
         </span>
-        <span className="text-[0.62rem] uppercase tracking-wider text-dim">bpm · {LABEL[mood]}</span>
+        <span className="text-xs uppercase tracking-wider text-dim">bpm · {LABEL[mood]}</span>
       </div>
     </div>
   );

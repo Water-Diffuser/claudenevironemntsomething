@@ -114,7 +114,7 @@ export default function SketchPanel() {
           <div className="grid h-full place-items-center p-6 text-center text-dim">
             <div>
               <Ruler className="mx-auto mb-2 text-accent" size={26} />
-              <div className="mb-1 font-display text-lg text-accent-2">No floor plan yet</div>
+              <div className="mb-1 empty-title !text-lg">No floor plan yet</div>
               Press the button and Claude will look through the project and draw how its parts fit together.
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function SketchPanel() {
           </div>
         )}
       </div>
-      {current?.state === 'done' && svg && <div className="shrink-0 border-t border-line px-2 py-0.5 text-[0.66rem] text-dim">scroll to zoom · drag to move{current.costUsd ? ` · cost $${current.costUsd.toFixed(3)}` : ''}</div>}
+      {current?.state === 'done' && svg && <div className="shrink-0 border-t border-line px-2 py-0.5 text-xs text-dim">scroll to zoom · drag to move{current.costUsd ? ` · cost $${current.costUsd.toFixed(3)}` : ''}</div>}
     </div>
   );
 }

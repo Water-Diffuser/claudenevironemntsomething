@@ -64,7 +64,7 @@ function TestGrid({ cases, selectedId, onSelect }: { cases: TestCase[]; selected
           const failed = g.cases.filter((c) => c.status === 'fail').length;
           return (
             <div key={v.key} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: v.size, transform: `translateY(${v.start}px)` }}>
-              <div className="flex items-center gap-2 text-[0.7rem]" style={{ height: HEAD }}>
+              <div className="flex items-center gap-2 text-xs" style={{ height: HEAD }}>
                 <span className="min-w-0 truncate font-mono text-dim" title={g.file}>
                   {g.file}
                 </span>
@@ -121,7 +121,7 @@ function CommandStrip({ run }: { run: RunRecord }) {
       {open && (
         <div className="space-y-2 border-t border-line px-3 py-2">
           {rep && rep.highlights.length > 0 && (
-            <ul className="m-0 list-none space-y-0.5 p-0 font-mono text-[0.72rem]">
+            <ul className="m-0 list-none space-y-0.5 p-0 font-mono text-xs">
               {rep.highlights.map((h, i) => (
                 <li key={i} className={`truncate ${run.ok ? 'text-dim' : 'text-bad'}`} title={h}>
                   {h}
@@ -130,10 +130,10 @@ function CommandStrip({ run }: { run: RunRecord }) {
             </ul>
           )}
           {rep && rep.problems.length > 0 && (
-            <ul className="m-0 max-h-32 list-none space-y-0.5 overflow-y-auto p-0 text-[0.72rem]">
+            <ul className="m-0 max-h-32 list-none space-y-0.5 overflow-y-auto p-0 text-xs">
               {rep.problems.slice(0, 30).map((p, i) => (
                 <li key={i}>
-                  <button className="flex w-full gap-2 text-left hover:text-accent-2" onClick={() => jump(p.file, p.line)}>
+                  <button className="flex w-full gap-2 text-left hover:text-ink" onClick={() => jump(p.file, p.line)}>
                     <span className={p.severity === 'error' ? 'text-bad' : 'text-warn'}>{p.severity === 'error' ? '✕' : '!'}</span>
                     <span className="shrink-0 font-mono text-dim">
                       {p.file}:{p.line}
@@ -146,7 +146,7 @@ function CommandStrip({ run }: { run: RunRecord }) {
           )}
           <details>
             <summary className="cursor-pointer text-dim">raw output</summary>
-            <pre className="m-0 mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded border border-line bg-bg/60 p-2 font-mono text-[0.7rem]">{run.output || '(no output)'}</pre>
+            <pre className="m-0 mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded border border-line bg-bg/60 p-2 font-mono text-xs">{run.output || '(no output)'}</pre>
           </details>
         </div>
       )}
@@ -221,7 +221,7 @@ export default function TestsPanel() {
         <div className={`grid place-items-center p-6 text-center text-dim ${commandRuns.length ? 'py-4' : 'flex-1'}`}>
           <div>
             <FlaskConical className="mx-auto mb-2 text-accent" size={24} />
-            <div className="mb-1 font-display text-lg text-accent-2">No test run yet</div>
+            <div className="mb-1 empty-title !text-lg">No test run yet</div>
             When Claude runs your tests, every test shows up here as a little cell.
           </div>
         </div>
@@ -239,7 +239,7 @@ export default function TestsPanel() {
           </div>
           {selCase.error && (
             <>
-              <div className="my-1.5 whitespace-pre-wrap break-words rounded-md border border-bad/50 bg-bad/10 px-2 py-1 font-mono text-[0.74rem] text-bad">{selCase.error.message}</div>
+              <div className="my-1.5 whitespace-pre-wrap break-words rounded-md border border-bad/50 bg-bad/10 px-2 py-1 font-mono text-xs text-bad">{selCase.error.message}</div>
               <FrameChain frames={selCase.error.frames} />
             </>
           )}
@@ -248,7 +248,7 @@ export default function TestsPanel() {
 
       {commandRuns.length > 0 && (
         <div className="max-h-[38%] shrink-0 space-y-1.5 overflow-y-auto border-t border-line px-2 py-2">
-          <div className="text-[0.66rem] uppercase tracking-wider text-dim">Commands</div>
+          <div className="text-xs uppercase tracking-wider text-dim">Commands</div>
           {commandRuns.map((r) => (
             <CommandStrip key={r.id} run={r} />
           ))}

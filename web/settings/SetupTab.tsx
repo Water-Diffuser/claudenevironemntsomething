@@ -29,7 +29,7 @@ export function SetupTab() {
     <>
       <Section title="Your setup" hint="Theme, colors, layouts, names, feature switches and sound volumes in one JSON file. Share it, back it up, or move it to another computer. Your earned Dishes stay where they are.">
         <div className="flex flex-wrap gap-2">
-          <button className="btn btn-primary !py-1 text-xs" onClick={() => download('indulgent-setup.json', exportSetup(ui))}>
+          <button className="btn text-xs" onClick={() => download('indulgent-setup.json', exportSetup(ui))}>
             <Download size={14} /> Export
           </button>
           <button className="btn !py-1 text-xs" onClick={() => file.current?.click()}>
@@ -38,7 +38,7 @@ export function SetupTab() {
           <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
         </div>
         <p className="text-xs text-dim">
-          Everything you change is saved automatically to <code className="font-mono text-accent-2">data/settings.json</code>. Delete that file to go back to the defaults in <code className="font-mono text-accent-2">indulgent.config.ts</code>.
+          Everything you change is saved automatically to <code className="font-mono text-ink">data/settings.json</code>. Delete that file to go back to the defaults in <code className="font-mono text-ink">indulgent.config.ts</code>.
         </p>
       </Section>
 

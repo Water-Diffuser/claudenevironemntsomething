@@ -21,7 +21,7 @@ export default function DonutPanel() {
     return (
       <div className="grid h-full place-items-center p-6 text-center text-dim">
         <div>
-          <div className="mb-1 font-display text-lg text-accent-2">Nothing baked yet</div>
+          <div className="mb-1 empty-title !text-lg">Nothing baked yet</div>
           As Claude works, its tool calls are sliced up here by kind.
         </div>
       </div>
@@ -56,8 +56,8 @@ export default function DonutPanel() {
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
           <div>
-            <div className="font-display text-2xl leading-none text-accent-2 glow-text">{total}</div>
-            <div className="text-[0.62rem] uppercase tracking-wider text-dim">tool calls</div>
+            <div className="font-display text-2xl leading-none text-ink">{total}</div>
+            <div className="text-xs uppercase tracking-wider text-dim">tool calls</div>
           </div>
         </div>
       </div>

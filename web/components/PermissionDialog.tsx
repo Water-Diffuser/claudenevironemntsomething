@@ -39,8 +39,8 @@ function QuestionBody({ req }: { req: PermissionRequest }) {
       <div className="max-h-[50vh] space-y-4 overflow-y-auto px-5 py-4">
         {qs.map((q) => (
           <div key={q.question}>
-            {q.header && <div className="mb-1 text-[0.68rem] uppercase tracking-wider text-accent-2">{q.header}</div>}
-            <div className="mb-2 font-semibold">{q.question}</div>
+            {q.header && <div className="eyebrow mb-1">{q.header}</div>}
+            <div className="mb-2 text-ink">{q.question}</div>
             <div className="space-y-1.5">
               {q.options.map((o) => {
                 const on = picked[q.question]?.includes(o.label);
@@ -48,9 +48,9 @@ function QuestionBody({ req }: { req: PermissionRequest }) {
                   <button
                     key={o.label}
                     onClick={() => toggle(q.question, o.label, !!q.multiSelect)}
-                    className={`w-full rounded-md border px-3 py-2 text-left transition ${on ? 'border-accent bg-accent/15' : 'border-line hover:border-accent-2'}`}
+                    className={`w-full rounded-md border px-3 py-2 text-left transition-colors ${on ? 'border-accent bg-accent-soft' : 'border-line hover:bg-surface-hi'}`}
                   >
-                    <div className="font-semibold">{o.label}</div>
+                    <div className="text-ink">{o.label}</div>
                     {o.description && <div className="text-sm text-dim">{o.description}</div>}
                   </button>
                 );
@@ -68,7 +68,7 @@ function QuestionBody({ req }: { req: PermissionRequest }) {
           disabled={!complete}
           onClick={() => reply(req, 'allow', Object.fromEntries(Object.entries(picked).map(([q, a]) => [q, a.join(', ')])))}
         >
-          <Check size={16} /> Answer
+          <Check size={14} /> Answer
         </button>
       </div>
     </>
@@ -95,32 +95,30 @@ export function PermissionDialog() {
       {req && (
         <motion.div
           key="backdrop"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'color-mix(in srgb, var(--c-shade) 62%, transparent)', backdropFilter: 'blur(5px)' }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-shade/60 p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: dur(0.18) }}
+          transition={{ duration: dur(0.15) }}
         >
           <motion.div
             key={req.requestId}
             role="dialog"
             aria-modal="true"
             aria-label={label}
-            className="gloss glow w-full max-w-xl overflow-hidden rounded-xl border border-accent bg-surface"
-            initial={{ opacity: 0, scale: 0.92, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: dur(0.26), ease: 'easeOut' }}
+            className="w-full max-w-xl overflow-hidden rounded-xl border border-line border-t-accent bg-surface shadow-[0_24px_60px_rgb(0_0_0/0.55)]"
+            style={{ borderTopWidth: 2 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: dur(0.2), ease: 'easeOut' }}
           >
-            <div className="flex items-center gap-3 border-b border-line px-5 py-4" style={{ background: `linear-gradient(90deg, color-mix(in srgb, ${kindVar(req.toolKind)} 22%, transparent), transparent)` }}>
-              <ShieldQuestion size={30} className="shrink-0 text-accent" />
+            <div className="flex items-center gap-3 border-b border-line px-5 py-4">
+              <ShieldQuestion size={20} className="shrink-0 text-accent" />
               <div className="min-w-0">
-                <div className="glitch glow-text font-display text-3xl leading-none text-accent-2" data-text={label}>
-                  {label}
-                </div>
-                <div className="mt-1 flex items-center gap-1.5 text-sm text-dim">
-                  <KindIcon kind={req.toolKind} tool={req.tool} size={14} />
+                <h2 className="m-0 font-display text-xl font-normal italic leading-tight">{label}</h2>
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-dim">
+                  <KindIcon kind={req.toolKind} tool={req.tool} size={12} />
                   {req.questions ? 'Claude has a question for you' : isPlan ? 'Claude has a plan and wants the green light' : req.title ?? `Claude would like to ${VERB[req.toolKind] ?? 'use a tool'}`}
                 </div>
               </div>
@@ -133,8 +131,8 @@ export function PermissionDialog() {
               <>
                 <div className="max-h-[50vh] overflow-y-auto px-5 py-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="font-semibold">{req.tool}</span>
-                    <span className="chip !py-0" style={{ color: kindVar(req.toolKind) }}>
+                    <span className="text-ink">{req.tool}</span>
+                    <span className="chip" style={{ color: kindVar(req.toolKind) }}>
                       {kindLabels[req.toolKind]}
                     </span>
                   </div>
@@ -142,17 +140,19 @@ export function PermissionDialog() {
                   <ToolInput tool={req.tool} input={req.input} />
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-3">
-                  <span className="mr-auto hidden text-xs text-dim sm:inline">Esc = deny</span>
+                  <span className="mr-auto text-xs text-dim max-sm:hidden">
+                    <span className="kbd">Esc</span> denies
+                  </span>
                   <button className="btn btn-danger" onClick={() => reply(req, 'deny')}>
-                    <X size={16} /> {isPlan ? 'Keep planning' : 'Deny'}
+                    <X size={14} /> {isPlan ? 'Keep planning' : 'Deny'}
                   </button>
                   {req.canAlwaysAllow && !isPlan && (
                     <button className="btn btn-ghost" onClick={() => reply(req, 'allow_always')} title="Allow this, and stop asking about similar requests">
-                      Allow &amp; don't ask again
+                      Always allow
                     </button>
                   )}
                   <button className="btn btn-primary" autoFocus onClick={() => reply(req, 'allow')}>
-                    <Check size={16} /> {isPlan ? 'Approve plan' : 'Allow'}
+                    <Check size={14} /> {isPlan ? 'Approve plan' : 'Allow'}
                   </button>
                 </div>
               </>

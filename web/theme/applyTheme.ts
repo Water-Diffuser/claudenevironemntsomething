@@ -59,6 +59,7 @@ export function applyTheme(theme: Theme, colorCode: ColorCode, calm: boolean) {
 
   set('--f-display', theme.fonts.display);
   set('--f-body', theme.fonts.body);
+  set('--f-ui', theme.fonts.ui ?? theme.fonts.body);
   set('--f-mono', theme.fonts.mono);
   set('--fs-base', `${theme.fontSize}px`);
   set('--radius', `${theme.radius}px`);
@@ -72,6 +73,10 @@ export function applyTheme(theme: Theme, colorCode: ColorCode, calm: boolean) {
   set('--fx-glitch', calm ? 0 : fx.glitch);
   set('--fx-glow', calm ? Math.min(fx.glow, 0.3) : fx.glow);
   set('--fx-gloss', fx.gloss);
+  // Scanlines and noise are whole-screen layers. When they are at 0 we switch the layers off
+  // completely (instead of drawing an invisible layer every frame), which saves battery.
+  root.dataset.scanlines = String(!calm && fx.scanlines > 0);
+  root.dataset.noise = String(!calm && fx.noise > 0);
 
   root.dataset.calm = String(calm);
   root.style.colorScheme = theme.dark ? 'dark' : 'light';

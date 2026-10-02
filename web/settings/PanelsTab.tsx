@@ -1,5 +1,5 @@
 // "Panels": which panels are on screen, and your saved layouts.
-// (Drag a panel's title bar to move it, drag its bottom-right corner to resize it. Both are saved automatically.)
+// (To move or resize panels, choose Layout > Arrange panels in the top bar. Changes are saved automatically.)
 import { useState } from 'react';
 import { Check, Save, Trash2, Undo2 } from 'lucide-react';
 import { config } from '@config';
@@ -26,12 +26,12 @@ export function PanelsTab() {
             const builtin = !!config.layouts[key];
             const edited = builtin && !!ui.customLayouts[key];
             return (
-              <div key={key} className={`flex items-center gap-1 rounded-lg border ${on ? 'border-accent bg-accent/10' : 'border-line'}`}>
+              <div key={key} className={`flex items-center gap-1 rounded-lg border ${on ? 'border-accent bg-accent-soft' : 'border-line'}`}>
                 <button className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left" onClick={() => switchLayout(key)} aria-pressed={on}>
                   <span className="grid size-4 shrink-0 place-items-center">{on && <Check size={14} className="text-accent" />}</span>
-                  <span className="truncate font-semibold">{l.label}</span>
-                  {!builtin && <span className="chip !py-0 text-[0.62rem]">yours</span>}
-                  {edited && <span className="chip !py-0 text-[0.62rem]">edited</span>}
+                  <span className="truncate text-ink">{l.label}</span>
+                  {!builtin && <span className="chip">yours</span>}
+                  {edited && <span className="chip">edited</span>}
                 </button>
                 {(edited || !builtin) && (
                   <button
@@ -56,14 +56,14 @@ export function PanelsTab() {
             setName('');
           }}
         >
-          <input className="field !py-1" placeholder="Save what you see as…" value={name} maxLength={30} onChange={(e) => setName(e.target.value)} aria-label="Name for a new layout" />
-          <button className="btn btn-primary shrink-0 !px-2.5 !py-1 text-xs" type="submit" disabled={!name.trim()}>
+          <input className="field" placeholder="Save what you see as…" value={name} maxLength={30} onChange={(e) => setName(e.target.value)} aria-label="Name for a new layout" />
+          <button className="btn shrink-0 !h-8 text-xs" type="submit" disabled={!name.trim()}>
             <Save size={13} /> save
           </button>
         </form>
       </Section>
 
-      <Section title="Panels" hint="Untick to hide a panel (this also frees the computer from drawing it). Hiding lasts until you switch layouts, unless you save the layout.">
+      <Section title="Panels" hint="Untick to hide a panel. A panel the layout doesn't place opens as a tab in the dock along the bottom. Hiding lasts until you switch layouts, unless you save the layout.">
         <div className="grid grid-cols-1 gap-1.5">
           {PANELS.map((p) => {
             const Icon = p.icon;
@@ -71,9 +71,9 @@ export function PanelsTab() {
             return (
               <label key={p.id} className="flex cursor-pointer items-center gap-2 text-sm">
                 <input type="checkbox" checked={isShown(ui, p.id)} onChange={(e) => setPanelShown(p.id, e.target.checked)} />
-                <Icon size={14} className="text-accent-2" />
+                <Icon size={14} className="text-dim" />
                 <span className="truncate">{label}</span>
-                {!isFeatureOn(ui, p.id) && <span className="chip !py-0 text-[0.62rem]">off in settings</span>}
+                {!isFeatureOn(ui, p.id) && <span className="chip">off in settings</span>}
               </label>
             );
           })}
@@ -84,7 +84,7 @@ export function PanelsTab() {
         {otherFeatures.map((f) => (
           <Toggle
             key={f}
-            label={f === 'hud' ? 'The HUD strip (avatar, Fullness, The Tab, stars)' : f === 'sound' ? 'Sound' : f}
+            label={f === 'hud' ? 'The HUD (avatar, Fullness, The Tab, stars)' : f === 'sound' ? 'Sound' : f}
             checked={isFeatureOn(ui, f)}
             onChange={(v) => update({ features: { ...ui.features, [f]: v } })}
           />

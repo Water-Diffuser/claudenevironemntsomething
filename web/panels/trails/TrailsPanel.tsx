@@ -27,7 +27,7 @@ export default function TrailsPanel() {
       <div className="grid h-full place-items-center p-6 text-center text-dim">
         <div>
           <Flame className="mx-auto mb-2 text-accent" size={24} />
-          <div className="mb-1 font-display text-lg text-accent-2">No burn marks</div>
+          <div className="mb-1 empty-title !text-lg">No burn marks</div>
           When a test, build or command fails, the trail through your code appears here.
         </div>
       </div>
@@ -54,8 +54,8 @@ export default function TrailsPanel() {
         })}
       </ul>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
-        <div className="mb-2 whitespace-pre-wrap break-words rounded-md border border-bad/50 bg-bad/10 px-2 py-1.5 font-mono text-[0.76rem] text-bad">{current.message}</div>
-        <div className="mb-1 text-[0.66rem] uppercase tracking-wider text-dim">The trail ({current.frames.length} frames)</div>
+        <div className="mb-2 whitespace-pre-wrap break-words rounded-md border border-bad/50 bg-bad/10 px-2 py-1.5 font-mono text-sm text-bad">{current.message}</div>
+        <div className="mb-1 text-xs uppercase tracking-wider text-dim">The trail ({current.frames.length} frames)</div>
         <FrameChain frames={current.frames} />
       </div>
     </div>

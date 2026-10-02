@@ -1,11 +1,13 @@
 // ============================================================================
-//  The HUD: a strip of game-style meters.
-//    The Voice  the avatar and what it is doing right now
+//  The HUD: a quiet strip of game-style meters, living in the top bar.
+//    The Voice  the little avatar and what it is doing right now
 //    Fullness   how much of Claude's context window (its "memory") is used
-//    The Tab    what this session has cost so far (and the tokens)
+//    The Tab    what this session has cost so far
 //    Stars      Michelin-style rating: one star per few finished menu items
+//  Labels live in the tooltips, so the strip stays small.
 // ============================================================================
-import { useEffect, useId, useState } from 'react';
+import { Receipt, Utensils } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { config } from '@config';
 import { fmtCost, fmtTokens } from '../lib/format';
 import { useLabel } from '../state/settings';
@@ -14,29 +16,36 @@ import { Avatar, avatarState } from './Avatar';
 
 /** A star that fills from empty to full (`fill` is 0..1). */
 function Star({ fill }: { fill: number }) {
-  const id = useId();
+  const full = fill >= 1;
+  const part = fill > 0 && !full;
   return (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden className={fill >= 1 ? 'drop-shadow-[0_0_6px_var(--c-warn)]' : ''}>
+    <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden>
       <defs>
-        <clipPath id={id}>
-          <rect x="0" y="0" width={24 * Math.max(0, Math.min(1, fill))} height="24" />
-        </clipPath>
+        <linearGradient id="star-part" x1="0" x2="1" y1="0" y2="0">
+          <stop offset={`${Math.round(fill * 100)}%`} stopColor="var(--c-warn)" />
+          <stop offset={`${Math.round(fill * 100)}%`} stopColor="transparent" />
+        </linearGradient>
       </defs>
-      <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="none" strokeWidth="1.4" strokeLinejoin="round" style={{ stroke: 'var(--c-warn)', opacity: 0.55 }} />
-      <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" clipPath={`url(#${id})`} strokeWidth="1.4" strokeLinejoin="round" style={{ fill: 'var(--c-warn)', stroke: 'var(--c-warn)' }} />
+      <path
+        d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        style={{ stroke: 'var(--c-warn)', strokeOpacity: full || part ? 1 : 0.35, fill: full ? 'var(--c-warn)' : part ? 'url(#star-part)' : 'none' }}
+      />
     </svg>
   );
 }
 
-function Meter({ label, value, text, color, title }: { label: string; value: number; text: string; color: string; title?: string }) {
+/** A tiny icon, a number, and a thin bar under them. (The name is in the tooltip.) */
+function Meter({ label, icon, value, text, color, title }: { label: string; icon: ReactNode; value: number; text: string; color: string; title: string }) {
   return (
-    <div className="min-w-[9.5rem] flex-1" title={title}>
-      <div className="flex items-baseline justify-between gap-2 text-[0.64rem] uppercase tracking-[0.14em]">
-        <span className="text-dim">{label}</span>
-        <span className="font-mono normal-case tracking-normal text-ink">{text}</span>
+    <div className="w-[4.4rem]" title={title}>
+      <div className="flex items-center gap-1.5 text-xs leading-none">
+        <span className="text-dim">{icon}</span>
+        <span className="ml-auto text-ink">{text}</span>
       </div>
-      <div className="mt-0.5 h-2 overflow-hidden rounded-full border border-line bg-bg/70" role="meter" aria-label={label} aria-valuenow={Math.round(value * 100)} aria-valuemin={0} aria-valuemax={100}>
-        <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.max(1.5, Math.min(100, value * 100))}%`, background: `linear-gradient(90deg, color-mix(in srgb, ${color} 70%, var(--c-bg)), ${color})`, boxShadow: `0 0 calc(var(--fx-glow) * 10px) ${color}` }} />
+      <div className="mt-1 h-[3px] overflow-hidden rounded-full bg-line" role="meter" aria-label={label} aria-valuenow={Math.round(value * 100)} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.max(2, Math.min(100, value * 100))}%`, background: color }} />
       </div>
     </div>
   );
@@ -66,7 +75,7 @@ export function HudBar() {
 
   // The Tab: cost against a budget
   const budget = config.hud.tabBudgetUsd;
-  const tabColor = d.usage.costUsd >= budget ? 'var(--c-bad)' : d.usage.costUsd >= budget * 0.7 ? 'var(--c-warn)' : 'var(--c-accent-2)';
+  const tabColor = d.usage.costUsd >= budget ? 'var(--c-bad)' : d.usage.costUsd >= budget * 0.7 ? 'var(--c-warn)' : 'var(--c-text-dim)';
 
   // Stars: one per N finished menu items (or finished takes, if Claude doesn't use a menu)
   const items = d.served.size > 0 ? d.served.size : d.turnsOk;
@@ -76,33 +85,39 @@ export function HudBar() {
   const status: Record<string, string> = {
     idle: 'waiting for a prompt',
     thinking: 'thinking…',
-    working: running ? `${running.tool}: ${running.summary}`.slice(0, 60) : 'working…',
-    done: 'served! ✨',
+    working: running ? `${running.tool}: ${running.summary}`.slice(0, 48) : 'working…',
+    done: 'served',
     glitching: 'something burned',
   };
 
   return (
-    <div className="gloss flex h-[var(--hud-h)] shrink-0 items-center gap-4 border-b border-line bg-bg-alt/70 px-3">
-      <div className="flex min-w-[13rem] max-w-[17rem] items-center gap-2.5">
-        <Avatar state={state} size={42} burst={d.phaseTs} />
-        <div className="min-w-0 leading-tight">
-          <div className="text-[0.64rem] uppercase tracking-[0.16em] text-accent-2">{voice}</div>
-          <div className="truncate text-xs" aria-live="polite">
-            {status[state]}
-          </div>
-        </div>
+    <div className="flex min-w-0 items-center gap-4">
+      <div className="flex min-w-0 items-center gap-2" title={`${voice}: ${status[state]}`}>
+        <Avatar state={state} size={30} burst={d.phaseTs} />
+        <span className="max-w-[13rem] truncate text-xs text-dim max-[1500px]:hidden" aria-live="polite">
+          {status[state]}
+        </span>
       </div>
-
-      <Meter label={fullnessLabel} value={fullness} color={fullColor} text={`${Math.round(fullness * 100)}% · ${fmtTokens(d.usage.contextTokens)}/${fmtTokens(d.usage.contextWindow)}`} title="How much of Claude's context window (its working memory) is in use. When it fills up, older details get squeezed out." />
-      <Meter label={tabLabel} value={d.usage.costUsd / budget} color={tabColor} text={`${fmtCost(d.usage.costUsd)} · ${fmtTokens(d.usage.outputTokens)} out`} title={`What this session has cost so far (budget meter: $${budget.toFixed(2)}). Updates when a take finishes.`} />
-
-      <div className="shrink-0" title={`${items} menu item${items === 1 ? '' : 's'} served. One star per ${config.hud.itemsPerStar}.`}>
-        <div className="text-[0.64rem] uppercase tracking-[0.14em] text-dim">{starsLabel}</div>
-        <div className="mt-0.5 flex" role="img" aria-label={`${stars.toFixed(1)} of 3 stars`}>
-          {[0, 1, 2].map((i) => (
-            <Star key={i} fill={stars - i} />
-          ))}
-        </div>
+      <Meter
+        label={fullnessLabel}
+        icon={<Utensils size={12} />}
+        value={fullness}
+        color={fullColor}
+        text={`${Math.round(fullness * 100)}%`}
+        title={`${fullnessLabel}: ${fmtTokens(d.usage.contextTokens)} of ${fmtTokens(d.usage.contextWindow)} tokens of Claude's context window (its working memory) are in use. When it fills up, older details get squeezed out.`}
+      />
+      <Meter
+        label={tabLabel}
+        icon={<Receipt size={12} />}
+        value={d.usage.costUsd / budget}
+        color={tabColor}
+        text={fmtCost(d.usage.costUsd)}
+        title={`${tabLabel}: this session has cost ${fmtCost(d.usage.costUsd)} (${fmtTokens(d.usage.outputTokens)} tokens out). The bar fills toward a $${budget.toFixed(2)} budget. Updates when a take finishes.`}
+      />
+      <div className="flex max-md:hidden" role="img" aria-label={`${starsLabel}: ${stars.toFixed(1)} of 3`} title={`${starsLabel}: ${items} menu item${items === 1 ? '' : 's'} served. One star per ${config.hud.itemsPerStar}.`}>
+        {[0, 1, 2].map((i) => (
+          <Star key={i} fill={stars - i} />
+        ))}
       </div>
     </div>
   );

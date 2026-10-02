@@ -2,7 +2,7 @@
 //  "Trophy Case": every Dish (achievement) you can earn. Locked ones show a
 //  hint; earned ones show when. They are saved in your settings, so they stay.
 // ============================================================================
-import { Lock, Trophy } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { DISHES } from '../../state/dishes';
 import { useSettings } from '../../state/settings';
 
@@ -12,27 +12,29 @@ export default function DishesPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-1.5 text-xs">
-        <Trophy size={14} className="text-warn" />
-        <span className="font-semibold">
-          {count} / {DISHES.length}
+      <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-2 text-xs">
+        <span className="text-ink">
+          {count} of {DISHES.length}
         </span>
         <span className="text-dim">dishes earned</span>
-        <div className="ml-auto h-1.5 w-24 overflow-hidden rounded-full bg-line/50" aria-hidden>
-          <div className="h-full bg-warn" style={{ width: `${(count / DISHES.length) * 100}%` }} />
+        <div className="ml-auto h-[3px] w-24 overflow-hidden rounded-full bg-line" aria-hidden>
+          <div className="h-full bg-accent" style={{ width: `${(count / DISHES.length) * 100}%` }} />
         </div>
       </div>
-      <ul className="m-0 grid min-h-0 flex-1 list-none grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2 overflow-y-auto p-2">
+      {/* a plain list, not a grid of cards: earned dishes are bright, locked ones are dim */}
+      <ul className="m-0 min-h-0 flex-1 list-none overflow-y-auto p-0">
         {DISHES.map((dish) => {
           const when = earned[dish.id];
           const got = when !== undefined;
           const Icon = dish.icon;
           return (
-            <li key={dish.id} className={`flex flex-col items-center rounded-lg border px-2 py-3 text-center transition ${got ? 'gloss border-accent/70 bg-accent/10' : 'border-line bg-surface/40 opacity-70'}`}>
-              <div className={`mb-1.5 grid size-12 place-items-center rounded-full border-2 ${got ? 'border-accent bg-accent/15 text-accent-2 glow' : 'border-dashed border-line text-dim'}`}>{got ? <Icon size={24} /> : <Lock size={18} />}</div>
-              <div className={`font-display text-base leading-tight ${got ? '' : 'text-dim'}`}>{got ? dish.name : '???'}</div>
-              <div className="mt-0.5 text-[0.7rem] leading-snug text-dim">{got ? dish.blurb : dish.hint}</div>
-              {got && <div className="mt-1 text-[0.62rem] uppercase tracking-wider text-accent-2">{new Date(when).toLocaleDateString()}</div>}
+            <li key={dish.id} className={`flex items-center gap-3 border-b border-line px-3 py-2.5 ${got ? '' : 'opacity-60'}`}>
+              <span className={`grid size-7 shrink-0 place-items-center rounded-full border ${got ? 'border-accent text-accent' : 'border-dashed border-line text-dim'}`}>{got ? <Icon size={14} /> : <Lock size={12} />}</span>
+              <div className="min-w-0 flex-1">
+                <div className={`font-display text-base leading-tight ${got ? 'text-ink' : 'text-dim'}`}>{got ? dish.name : '???'}</div>
+                <div className="text-xs leading-snug text-dim">{got ? dish.blurb : dish.hint}</div>
+              </div>
+              {got && <div className="shrink-0 text-xs text-dim">{new Date(when).toLocaleDateString()}</div>}
             </li>
           );
         })}

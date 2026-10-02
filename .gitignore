@@ -8,3 +8,6 @@ data/
 # your own sound files (the folder and its README stay)
 user-audio/*
 !user-audio/README.md
+
+# screenshots from the browser checks
+tests/browser/shots/

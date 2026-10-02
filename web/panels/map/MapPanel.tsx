@@ -386,17 +386,17 @@ export function MapPanel() {
   const litCounts: Partial<Record<Kind, number>> = {};
   for (const t of d.touched.values()) litCounts[t.kind] = (litCounts[t.kind] ?? 0) + 1;
 
-  if (!cwd) return <div className="grid h-full place-items-center p-6 text-center text-dim">Choose a project to see its {label.toLowerCase()}.</div>;
+  if (!cwd) return <div className="empty">Choose a project to see its {label.toLowerCase()}.</div>;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* breadcrumb + controls */}
       <div className="flex shrink-0 items-center gap-1.5 border-b border-line px-2 py-1 text-xs">
-        <button className="btn btn-ghost !p-1" disabled={!focus} onClick={zoomOut} title="Zoom out (scroll down)" aria-label="Zoom out">
+        <button className="icon-btn icon-btn-sm" disabled={!focus} onClick={zoomOut} title="Zoom out (scroll down)" aria-label="Zoom out">
           <ArrowUp size={14} />
         </button>
         <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden whitespace-nowrap font-mono" aria-label="Folder path">
-          <button className="text-accent-2 hover:underline" onClick={() => zoomTo('')}>
+          <button className="text-ink hover:underline" onClick={() => zoomTo('')}>
             {scanName || 'project'}
           </button>
           {crumbs.map((c, i) => (
@@ -408,8 +408,8 @@ export function MapPanel() {
             </span>
           ))}
         </nav>
-        <button className={`btn btn-ghost !px-1.5 !py-0.5 text-xs ${dim ? 'border-accent' : ''}`} onClick={() => setDim((d) => !d)} title="Fade out files Claude hasn't touched" aria-pressed={dim}>
-          {dim ? <EyeOff size={13} /> : <Eye size={13} />} focus
+        <button className={`icon-btn icon-btn-sm ${dim ? 'is-on' : ''}`} onClick={() => setDim((d) => !d)} title="Fade out files Claude hasn't touched" aria-label="Fade out untouched files" aria-pressed={dim}>
+          {dim ? <EyeOff size={14} /> : <Eye size={14} />}
         </button>
       </div>
 
@@ -422,17 +422,15 @@ export function MapPanel() {
       </div>
 
       {/* legend: the color code */}
-      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t border-line px-2 py-1.5 text-[0.7rem]">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t border-line px-3 py-1.5 text-xs text-dim">
         {KINDS.filter((k) => k !== 'other').map((k: Kind) => (
-          <span key={k} className="inline-flex items-center gap-1" title={`${kindLabels[k]}: ${litCounts[k] ?? 0} files lit`}>
-            <span className="inline-block size-2.5 rounded-sm" style={{ background: kindVar(k) }} />
-            <span style={{ color: kindVar(k) }} className="font-semibold tracking-wide">
-              {kindLabels[k]}
-            </span>
-            {!!litCounts[k] && <span className="text-dim">{litCounts[k]}</span>}
+          <span key={k} className="inline-flex items-center gap-1.5" title={`${kindLabels[k]}: ${litCounts[k] ?? 0} files lit`}>
+            <span className="inline-block size-2 rounded-full" style={{ background: kindVar(k) }} />
+            <span className="lowercase">{kindLabels[k]}</span>
+            {!!litCounts[k] && <span className="text-ink">{litCounts[k]}</span>}
           </span>
         ))}
-        <span className="ml-auto text-dim">
+        <span className="ml-auto">
           {stats.count.toLocaleString()} files · {stats.lines.toLocaleString()} lines{truncated ? ' (truncated)' : ''}
           {progress < 1 && ` · reading code ${Math.round(progress * 100)}%`}
         </span>
@@ -451,7 +449,7 @@ function Tooltip({ tip, bounds }: { tip: { cell: Cell; x: number; y: number }; b
   const subtree = (x: TNode): number => (x.children ? x.children.reduce((a, c) => a + subtree(c), 0) : x.value);
   return (
     <div className="pointer-events-none absolute z-20 max-w-[16rem] rounded-md border border-line bg-surface/95 px-2.5 py-1.5 text-xs shadow-lg" style={{ left: Math.max(4, left), top: Math.max(4, top) }}>
-      <div className="break-all font-mono font-semibold text-accent-2">{n.path || n.name}</div>
+      <div className="break-all font-mono text-ink">{n.path || n.name}</div>
       <div className="text-dim">
         {n.isDir ? `folder · ${subtree(n).toLocaleString()} lines` : n.dust ? `${n.dust} small files · ${n.value} lines` : n.ghost ? 'not on disk' : `${n.file?.lines.toLocaleString()} lines${n.file?.lang ? ' · ' + n.file.lang : ''}`}
       </div>

@@ -60,11 +60,9 @@ export default function MenuPanel() {
 
   if (items.length === 0) {
     return (
-      <div className="grid h-full place-items-center p-6 text-center text-dim">
-        <div>
-          <div className="mb-1 font-display text-lg text-accent-2">No menu tonight</div>
-          When Claude makes a plan, the courses appear here, and each one is plated as it is finished.
-        </div>
+      <div className="empty">
+        <h3 className="empty-title m-0 !text-lg">No menu tonight.</h3>
+        <p className="m-0 max-w-[34ch] text-sm">When Claude makes a plan, the courses appear here, and each one is plated as it is finished.</p>
       </div>
     );
   }
@@ -74,16 +72,16 @@ export default function MenuPanel() {
 
   return (
     <div className="h-full overflow-y-auto p-3">
-      <div className="mx-auto max-w-md rounded-lg border border-line p-1" style={{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--c-accent) 6%, transparent), transparent)' }}>
-        <div className="rounded-md border border-dashed border-line px-4 py-3">
+      <div className="mx-auto max-w-md rounded-lg border border-line">
+        <div className="px-5 py-4">
           <div className="text-center">
-            <div className="font-display text-xl tracking-[0.2em] text-accent-2 glow-text">LE MENU</div>
-            <div className="text-xs italic text-dim">— chef's tasting, composed live —</div>
-            <div className="mx-auto my-2 h-px w-24 bg-line" />
+            <div className="font-display text-xl italic text-ink">Le menu</div>
+            <div className="text-xs text-dim">chef's tasting, composed live</div>
+            <div className="mx-auto my-3 h-px w-16 bg-line" />
           </div>
           {courses.map(({ course, items: list }) => (
             <section key={course} className="mb-3 last:mb-0">
-              <h3 className="m-0 mb-1 text-center font-display text-[0.8rem] uppercase tracking-[0.3em] text-accent-2">{course}</h3>
+              <h3 className="eyebrow m-0 mb-1 text-center">{course}</h3>
               <ul className="m-0 list-none space-y-1.5 p-0">
                 <AnimatePresence initial={false}>
                   {list.map(({ item, index }) => {
@@ -94,9 +92,9 @@ export default function MenuPanel() {
                         <span className="grid size-5 shrink-0 place-items-center">
                           {done ? <Check size={15} className="text-good" /> : active ? <Flame size={15} className="animate-pulse text-warn" /> : <span className="size-2 rounded-full border border-dim" />}
                         </span>
-                        <span className={`min-w-0 flex-1 text-sm ${done ? 'text-dim line-through decoration-good/60' : ''} ${active ? 'font-semibold' : ''}`}>{active && item.activeForm ? item.activeForm : item.content}</span>
+                        <span className={`min-w-0 flex-1 text-sm ${done ? 'text-dim line-through decoration-good/60' : ''} ${active ? 'text-ink' : ''}`}>{active && item.activeForm ? item.activeForm : item.content}</span>
                         <span className="mx-1 hidden min-w-4 flex-1 border-b border-dotted border-line sm:block" aria-hidden />
-                        {plating.has(item.content) ? <Cloche /> : <span className="shrink-0 text-[0.62rem] uppercase tracking-wider text-dim">{done ? 'served' : active ? 'plating' : 'ordered'}</span>}
+                        {plating.has(item.content) ? <Cloche /> : <span className="shrink-0 text-xs text-dim">{done ? 'served' : active ? 'plating' : 'ordered'}</span>}
                       </motion.li>
                     );
                   })}

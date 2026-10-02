@@ -1,6 +1,10 @@
 /* ============================================================================
    INDULGENT: global styles.
 
+   Direction: "night service". A dim restaurant pass with a mixing desk at the
+   end of it: neutral near-black surfaces, hairline rules, and ONE hot-pink
+   signal light. Quiet by default; the loud effects are opt-in.
+
    RULE: no raw colors, fonts, sizes or effects live in component code.
    Everything comes from the CSS variables below. They are filled in at runtime
    by web/theme/applyTheme.ts from the current theme (see indulgent.config.ts).
@@ -11,19 +15,19 @@
 /* ---- 1. the variables ------------------------------------------------------ */
 :root {
   /* palette */
-  --c-bg: #0c0610;
-  --c-bg-alt: #140a1a;
-  --c-surface: #1c0f26;
-  --c-surface-hi: #2b1740;
-  --c-border: #4b2862;
-  --c-text: #fdeef8;
-  --c-text-dim: #bb98b4;
+  --c-bg: #09080b;
+  --c-bg-alt: #0d0b10;
+  --c-surface: #121015;
+  --c-surface-hi: #1a171e;
+  --c-border: #26222b;
+  --c-text: #ece8ef;
+  --c-text-dim: #8d8697;
   --c-accent: #ff2e97;
-  --c-accent-2: #ffa8dc;
-  --c-on-accent: #1a0412;
-  --c-good: #4cf0a0;
-  --c-bad: #ff4a5c;
-  --c-warn: #ffd54a;
+  --c-accent-2: #ff8ec4;
+  --c-on-accent: #19030f;
+  --c-good: #4fd9a0;
+  --c-bad: #ff5d6c;
+  --c-warn: #f0c04e;
   /* constants used for shading and highlights */
   --c-shade: #000;
   --c-light: #fff;
@@ -37,31 +41,40 @@
   --k-run: #ffd23f;
   --k-other: #8f8aa3;
 
-  /* type + shape */
+  /* type: display = wordmark + headlines, body = what you read, ui = the interface, mono = code */
   --f-display: 'Fraunces Variable', Georgia, serif;
-  --f-body: 'Nunito Variable', system-ui, sans-serif;
+  --f-body: 'Fraunces Variable', Georgia, serif;
+  --f-ui: 'JetBrains Mono Variable', ui-monospace, monospace;
   --f-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
-  --fs-base: 15px;
-  --radius: 14px;
+  --fs-base: 13px;
+  --radius: 8px;
 
   /* motion: --anim is a speed multiplier. --motion is 0 in calm mode, 1 otherwise. */
   --anim: 1;
   --motion: 1;
-  --t-fast: calc(140ms / var(--anim));
-  --t-med: calc(260ms / var(--anim));
-  --t-slow: calc(600ms / var(--anim));
+  --t-fast: calc(120ms / var(--anim));
+  --t-med: calc(200ms / var(--anim));
+  --t-slow: calc(500ms / var(--anim));
 
   /* effects, each 0..1 */
-  --fx-scanlines: 0.12;
-  --fx-noise: 0.12;
-  --fx-glow: 0.6;
-  --fx-glitch: 0.25;
-  --fx-gloss: 0.8;
+  --fx-scanlines: 0;
+  --fx-noise: 0;
+  --fx-glow: 0.3;
+  --fx-glitch: 0;
+  --fx-gloss: 0.15;
 
-  /* layout sizes */
-  --topbar-h: 3.4rem;
-  --sidebar-w: 16rem;
-  --grid-gap: 10px;
+  /* a few derived colors, so components never mix their own */
+  --c-hair: color-mix(in srgb, var(--c-border) 70%, transparent);
+  --c-hover: color-mix(in srgb, var(--c-text) 6%, transparent);
+  --c-accent-soft: color-mix(in srgb, var(--c-accent) 14%, transparent);
+
+  /* layout sizes (one row of chrome at the top, one thin header per panel) */
+  --topbar-h: 46px;
+  --head-h: 34px;
+  --dock-bar-h: 32px;
+  --sidebar-w: 19rem;
+  --grid-gap: 0px;
+  --hud-h: 0px;
 }
 
 /* ---- 2. tell Tailwind about the variables so we can write bg-surface, text-dim, etc. ---- */
@@ -87,13 +100,34 @@
   --color-k-delete: var(--k-delete);
   --color-k-run: var(--k-run);
   --color-k-other: var(--k-other);
-  --font-sans: var(--f-body);
+  --font-sans: var(--f-ui);
   --font-display: var(--f-display);
+  --font-body: var(--f-body);
   --font-mono: var(--f-mono);
   --radius-sm: calc(var(--radius) * 0.5);
   --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) * 1.4);
-  --radius-xl: calc(var(--radius) * 1.8);
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+
+  /* ONE spacing unit = 4px at the default 13px base, so everything sits on a 4px grid */
+  --spacing: 0.3077rem;
+
+  /* ONE type scale (5 steps). Nothing in the app picks its own size. */
+  --text-*: initial;
+  --text-xs: 0.846rem; /* 11px: captions, eyebrow labels */
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.923rem; /* 12px: secondary text, controls */
+  --text-sm--line-height: 1.5;
+  --text-base: 1rem; /* 13px: the interface */
+  --text-base--line-height: 1.5;
+  --text-lg: 1.154rem; /* 15px: what you read (Claude's replies) */
+  --text-lg--line-height: 1.6;
+  --text-xl: 1.538rem; /* 20px: headlines */
+  --text-xl--line-height: 1.25;
+  --text-2xl: 1.846rem; /* 24px: big numbers */
+  --text-2xl--line-height: 1.15;
+  --text-3xl: 2.308rem; /* 30px */
+  --text-3xl--line-height: 1.1;
 }
 
 /* ---- 3. base ---------------------------------------------------------------- */
@@ -104,42 +138,55 @@ html {
 body {
   height: 100%;
   margin: 0;
-  background:
-    radial-gradient(120% 80% at 15% -10%, color-mix(in srgb, var(--c-accent) 14%, transparent), transparent 60%),
-    radial-gradient(90% 70% at 100% 110%, color-mix(in srgb, var(--c-accent-2) 10%, transparent), transparent 60%),
-    var(--c-bg);
+  background: var(--c-bg);
   color: var(--c-text);
-  font-family: var(--f-body);
+  font-family: var(--f-ui);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 #root {
   height: 100%;
 }
 ::selection {
-  background: color-mix(in srgb, var(--c-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--c-accent) 40%, transparent);
 }
-* {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--c-accent) 40%, var(--c-surface)) transparent;
-}
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
-button {
-  cursor: pointer;
-}
-:focus-visible {
-  outline: 2px solid var(--c-accent-2);
-  outline-offset: 2px;
+/* (inside @layer base so that Tailwind classes like `outline-none` can still override these) */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-border) transparent;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  h1, h2, h3, h4 {
+    font-weight: 600;
+  }
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--c-accent) 75%, transparent);
+    outline-offset: 1px;
+  }
+  /* mouse clicks on buttons should not leave a ring; keyboard focus still shows one */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
 }
 
-/* ---- 4. screen effects ------------------------------------------------------ */
+/* ---- 4. screen effects (all OFF by default; turn them up in the settings drawer) --- */
 /* Scanlines: faint horizontal lines over everything. */
-body::before {
+html[data-scanlines='true'] body::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -149,7 +196,7 @@ body::before {
   opacity: var(--fx-scanlines);
 }
 /* VHS noise: a grainy layer that jitters. */
-body::after {
+html[data-noise='true'] body::after {
   content: '';
   position: fixed;
   inset: -50%;
@@ -159,7 +206,6 @@ body::after {
   opacity: calc(var(--fx-noise) * 0.22);
   mix-blend-mode: overlay;
   animation: noise-jitter calc(0.9s / var(--anim)) steps(5) infinite;
-  animation-play-state: running;
 }
 @keyframes noise-jitter {
   0% { transform: translate(0, 0); }
@@ -170,28 +216,31 @@ body::after {
   100% { transform: translate(0, 0); }
 }
 
-/* Glow helpers */
+/* Glow helpers (a soft halo in the accent color; strength = --fx-glow) */
 .glow {
-  box-shadow: 0 0 calc(var(--fx-glow) * 26px) color-mix(in srgb, var(--c-accent) calc(var(--fx-glow) * 55%), transparent);
+  box-shadow: 0 0 calc(var(--fx-glow) * 22px) color-mix(in srgb, var(--c-accent) calc(var(--fx-glow) * 45%), transparent);
 }
 .glow-text {
-  text-shadow: 0 0 calc(var(--fx-glow) * 14px) color-mix(in srgb, var(--c-accent) calc(var(--fx-glow) * 80%), transparent);
+  text-shadow: 0 0 calc(var(--fx-glow) * 12px) color-mix(in srgb, var(--c-accent) calc(var(--fx-glow) * 70%), transparent);
 }
 
-/* Gloss: a glassy highlight across the top of a surface. */
+/* Gloss: ONE bright hairline along the top edge of a surface (strength = --fx-gloss). */
 .gloss {
   position: relative;
 }
 .gloss::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
   pointer-events: none;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c-light) calc(var(--fx-gloss) * 22%), transparent), transparent 45%);
+  z-index: 1;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--c-light) calc(var(--fx-gloss) * 60%), transparent) 20%, color-mix(in srgb, var(--c-light) calc(var(--fx-gloss) * 60%), transparent) 80%, transparent);
 }
 
-/* Glitch: text that occasionally tears. Put class="glitch" and data-text="same text". */
+/* Glitch: text that occasionally tears. Put class="glitch" and data-text="same text". Strength = --fx-glitch (0 = invisible). */
 .glitch {
   position: relative;
   display: inline-block;
@@ -251,36 +300,44 @@ html[data-calm='true'] body::after {
 }
 
 /* ---- 5. shared building blocks ---------------------------------------------- */
+
+/* A tiled panel. Panels meet edge to edge; each draws only its right and bottom hairline. */
 .panel {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: linear-gradient(180deg, var(--c-surface-hi), var(--c-surface) 40%);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  box-shadow:
-    0 8px 28px color-mix(in srgb, var(--c-shade) 35%, transparent),
-    0 0 calc(var(--fx-glow) * 16px) color-mix(in srgb, var(--c-accent) calc(var(--fx-glow) * 18%), transparent);
+  background: var(--c-surface);
+  border-right: 1px solid var(--c-border);
+  border-bottom: 1px solid var(--c-border);
 }
 .panel-head {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.7rem;
+  gap: calc(var(--spacing) * 2);
+  height: var(--head-h);
+  padding: 0 calc(var(--spacing) * 3);
   border-bottom: 1px solid var(--c-border);
-  font-family: var(--f-display);
-  font-size: 0.85rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--c-accent-2);
-  cursor: grab;
+  background: var(--c-bg-alt);
+  font-size: var(--text-sm);
+  color: var(--c-text-dim);
   user-select: none;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c-accent) 14%, transparent), transparent);
 }
-.panel-head:active {
+/* Only in "arrange" mode do panel headers become drag handles. */
+.arranging .panel-head {
+  cursor: grab;
+}
+.arranging .panel-head:active {
   cursor: grabbing;
+}
+.panel-title {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  color: var(--c-text);
 }
 .panel-body {
   flex: 1;
@@ -288,124 +345,351 @@ html[data-calm='true'] body::after {
   overflow: auto;
 }
 
+/* Tabs: a quiet strip, the selected one gets a 2px accent underline. */
+.tabs {
+  display: flex;
+  min-width: 0;
+  align-items: stretch;
+  align-self: stretch;
+  gap: calc(var(--spacing) * 1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+.tab {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+  padding: 0 calc(var(--spacing) * 2.5);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--c-text-dim);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.tab:hover {
+  color: var(--c-text);
+  background: var(--c-hover);
+}
+.tab[aria-selected='true'] {
+  color: var(--c-text);
+  border-bottom-color: var(--c-accent);
+}
+
+/* The "on air" light: a 2px line under the top bar that sweeps while Claude is working. */
+.onair {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.onair::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
+  background: var(--c-accent);
+  box-shadow: 0 0 calc(var(--fx-glow) * 14px) var(--c-accent);
+  opacity: 0;
+  transition: opacity var(--t-med);
+}
+.onair[data-on='true']::after {
+  opacity: 1;
+  animation: onair calc(1.8s / var(--anim)) ease-in-out infinite;
+}
+@keyframes onair {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(333%); }
+}
+/* In calm mode it does not sweep: it is a steady, dim line instead. */
+html[data-calm='true'] .onair[data-on='true']::after {
+  width: 100%;
+  opacity: 0.45;
+  transform: none;
+}
+
+/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
+  gap: calc(var(--spacing) * 1.5);
+  height: calc(var(--spacing) * 7);
+  padding: 0 calc(var(--spacing) * 3);
   border-radius: var(--radius);
   border: 1px solid var(--c-border);
-  background: linear-gradient(180deg, var(--c-surface-hi), var(--c-surface));
+  background: transparent;
   color: var(--c-text);
-  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), filter var(--t-fast);
 }
-.btn:hover {
-  border-color: var(--c-accent);
-  transform: translateY(-1px);
-}
-.btn:active {
-  transform: translateY(0);
+.btn:hover:not(:disabled) {
+  background: var(--c-surface-hi);
+  border-color: color-mix(in srgb, var(--c-text) 22%, var(--c-border));
 }
 .btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
+  opacity: 0.4;
 }
 .btn-primary {
-  position: relative;
-  border-color: color-mix(in srgb, var(--c-accent) 70%, var(--c-light));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c-accent) 85%, var(--c-light)), var(--c-accent));
+  border-color: var(--c-accent);
+  background: var(--c-accent);
   color: var(--c-on-accent);
-  font-weight: 700;
-  box-shadow: 0 0 calc(var(--fx-glow) * 22px) color-mix(in srgb, var(--c-accent) calc(var(--fx-glow) * 60%), transparent);
+  font-weight: 600;
+  box-shadow: 0 0 calc(var(--fx-glow) * 18px) color-mix(in srgb, var(--c-accent) calc(var(--fx-glow) * 55%), transparent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  filter: brightness(1.1);
 }
 .btn-danger {
-  border-color: color-mix(in srgb, var(--c-bad) 70%, transparent);
+  border-color: color-mix(in srgb, var(--c-bad) 55%, var(--c-border));
   color: var(--c-bad);
 }
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
   border-color: var(--c-bad);
-  background: color-mix(in srgb, var(--c-bad) 14%, var(--c-surface));
+  background: color-mix(in srgb, var(--c-bad) 12%, transparent);
 }
 .btn-ghost {
-  background: transparent;
+  border-color: transparent;
 }
+/* a square, icon-only button (the meaning must be clear from the icon + its tooltip) */
+.icon-btn {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: calc(var(--spacing) * 7);
+  height: calc(var(--spacing) * 7);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--c-text-dim);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.icon-btn:hover:not(:disabled) {
+  background: var(--c-hover);
+  color: var(--c-text);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+}
+.icon-btn[aria-pressed='true'],
+.icon-btn[aria-expanded='true'],
+.icon-btn.is-on {
+  background: var(--c-accent-soft);
+  color: var(--c-accent);
+}
+.icon-btn-sm {
+  width: calc(var(--spacing) * 6);
+  height: calc(var(--spacing) * 6);
+}
+
 .field {
   width: 100%;
-  padding: 0.5rem 0.7rem;
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 2.5);
   border-radius: var(--radius);
   border: 1px solid var(--c-border);
-  background: color-mix(in srgb, var(--c-bg) 70%, var(--c-surface));
+  background: var(--c-bg);
   color: var(--c-text);
+  font-size: var(--text-sm);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.field::placeholder {
+  color: var(--c-text-dim);
+  opacity: 0.8;
 }
 .field:focus {
   outline: none;
-  border-color: var(--c-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent) 25%, transparent);
+  border-color: color-mix(in srgb, var(--c-accent) 70%, var(--c-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent) 16%, transparent);
 }
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.1rem 0.5rem;
+  gap: calc(var(--spacing) * 1);
+  padding: 0 calc(var(--spacing) * 2);
+  height: calc(var(--spacing) * 5);
   border-radius: 999px;
   border: 1px solid var(--c-border);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  font-size: var(--text-xs);
   color: var(--c-text-dim);
+  white-space: nowrap;
+}
+/* a small borderless dropdown button, like the model picker under the message box */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1);
+  height: calc(var(--spacing) * 6);
+  padding: 0 calc(var(--spacing) * 2);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--c-text-dim);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.pill:hover:not(:disabled),
+.pill[aria-expanded='true'] {
+  background: var(--c-hover);
+  color: var(--c-text);
+}
+.pill:disabled {
+  opacity: 0.45;
+}
+
+/* tiny uppercase label above a group of things */
+.eyebrow {
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+}
+/* a keyboard hint like "Enter" or "Ctrl S" */
+.kbd {
+  display: inline-block;
+  padding: 0 calc(var(--spacing) * 1.5);
+  border: 1px solid var(--c-border);
+  border-radius: calc(var(--radius) * 0.5);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--c-text-dim);
+}
+
+/* Popover menus (the model picker, layout switcher, "+" in the dock...). The one place a shadow is used. */
+.menu {
+  z-index: 60;
+  min-width: 12rem;
+  max-height: min(26rem, 70vh);
+  overflow-y: auto;
+  padding: calc(var(--spacing) * 1);
+  border: 1px solid var(--c-border);
+  border-radius: calc(var(--radius) * 1.5);
+  background: var(--c-surface-hi);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--c-shade) 55%, transparent);
+  animation: menu-in var(--t-fast) ease-out;
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+.menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--c-text);
+  font-size: var(--text-sm);
+  text-align: left;
+}
+.menu-item:hover:not(:disabled),
+.menu-item[data-active='true'] {
+  background: var(--c-hover);
+}
+.menu-item:disabled {
+  opacity: 0.4;
+}
+.menu-item[aria-checked='true'] {
+  color: var(--c-accent);
+}
+.menu-sep {
+  height: 1px;
+  margin: calc(var(--spacing) * 1) calc(var(--spacing) * -1);
+  background: var(--c-border);
+}
+.menu-label {
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 2) calc(var(--spacing) * 1);
+}
+
+/* A centered empty state: one headline (serif), one line of help, at most one button. */
+.empty {
+  display: grid;
+  height: 100%;
+  place-content: center;
+  justify-items: center;
+  gap: calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 6);
+  text-align: center;
+  color: var(--c-text-dim);
+}
+.empty-title {
+  font-family: var(--f-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--c-text);
 }
 
 /* ---- 6. markdown + code highlighting (token colors come from the variables) --- */
 .md {
-  line-height: 1.55;
+  font-family: var(--f-body);
+  font-size: var(--text-lg);
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }
-.md p { margin: 0.55em 0; }
+.md p { margin: 0.6em 0; }
 .md h1, .md h2, .md h3 {
   font-family: var(--f-display);
-  margin: 0.9em 0 0.35em;
-  color: var(--c-accent-2);
+  margin: 1em 0 0.4em;
+  color: var(--c-text);
   line-height: 1.2;
 }
-.md h1 { font-size: 1.35em; }
-.md h2 { font-size: 1.2em; }
-.md h3 { font-size: 1.05em; }
+.md h1 { font-size: 1.3em; }
+.md h2 { font-size: 1.18em; }
+.md h3 { font-size: 1.06em; }
 .md ul, .md ol { margin: 0.5em 0; padding-left: 1.3em; }
 .md ul { list-style: disc; }
 .md ol { list-style: decimal; }
 .md li { margin: 0.2em 0; }
+.md li::marker { color: var(--c-text-dim); }
 .md a { color: var(--c-accent); text-decoration: underline; text-underline-offset: 2px; }
 .md blockquote {
   margin: 0.6em 0;
   padding: 0.1em 0.9em;
-  border-left: 3px solid var(--c-accent);
+  border-left: 2px solid var(--c-accent);
   color: var(--c-text-dim);
 }
 .md hr { border: 0; border-top: 1px solid var(--c-border); margin: 1em 0; }
-.md table { border-collapse: collapse; margin: 0.6em 0; font-size: 0.92em; }
+.md table { border-collapse: collapse; margin: 0.6em 0; font-family: var(--f-ui); font-size: var(--text-sm); }
 .md th, .md td { border: 1px solid var(--c-border); padding: 0.3em 0.6em; }
-.md th { background: color-mix(in srgb, var(--c-accent) 12%, transparent); }
+.md th { background: var(--c-surface-hi); font-weight: 600; }
 .md :not(pre) > code {
   font-family: var(--f-mono);
-  font-size: 0.88em;
-  padding: 0.1em 0.35em;
-  border-radius: calc(var(--radius) * 0.4);
-  background: color-mix(in srgb, var(--c-accent) 14%, var(--c-bg));
-  color: var(--c-accent-2);
+  font-size: 0.82em;
+  padding: 0.1em 0.4em;
+  border-radius: calc(var(--radius) * 0.5);
+  background: var(--c-surface-hi);
+  color: var(--c-text);
 }
 .md pre {
   margin: 0.7em 0;
   padding: 0.75em 0.9em;
   overflow-x: auto;
-  border-radius: calc(var(--radius) * 0.7);
+  border-radius: var(--radius);
   border: 1px solid var(--c-border);
-  background: color-mix(in srgb, var(--c-bg) 85%, var(--c-surface));
+  background: var(--c-bg);
   font-family: var(--f-mono);
-  font-size: 0.85em;
-  line-height: 1.5;
+  font-size: var(--text-sm);
+  line-height: 1.55;
 }
 .hljs { color: var(--c-text); }
 .hljs-comment, .hljs-quote { color: var(--c-text-dim); font-style: italic; }
@@ -421,17 +705,28 @@ html[data-calm='true'] body::after {
 /* ---- 7. react-grid-layout (drag/resize) themed with our variables ------------- */
 .react-grid-item.react-grid-placeholder {
   background: var(--c-accent);
-  opacity: 0.18;
-  border-radius: var(--radius);
+  opacity: 0.12;
 }
 .react-grid-item.react-draggable-dragging,
 .react-grid-item.resizing {
   z-index: 20;
-  opacity: 0.92;
+  opacity: 0.94;
+}
+/* Resize handles exist only while you are arranging the layout. */
+.react-grid-item > .react-resizable-handle {
+  display: none;
+}
+.arranging .react-grid-item > .react-resizable-handle {
+  display: block;
 }
 .react-grid-item > .react-resizable-handle::after {
-  border-color: var(--c-accent-2) !important;
-  opacity: 0.7;
+  border-color: var(--c-accent) !important;
+  opacity: 0.8;
+}
+/* While arranging, every panel gets a dashed accent outline so you can see what you can move. */
+.arranging .react-grid-item > .panel {
+  outline: 1px dashed color-mix(in srgb, var(--c-accent) 60%, transparent);
+  outline-offset: -3px;
 }
 
 /* ---- 8. code view decorations (Monaco) ----------------------------------------- */
@@ -444,9 +739,9 @@ html[data-calm='true'] body::after {
 .deco-region {
   background: color-mix(in srgb, var(--kc) var(--a, 16%), transparent);
 }
-.deco-region.l1 { --a: 38%; }
-.deco-region.l2 { --a: 22%; }
-.deco-region.l3 { --a: 11%; }
+.deco-region.l1 { --a: 20%; }
+.deco-region.l2 { --a: 12%; }
+.deco-region.l3 { --a: 6%; }
 .deco-region.live { animation: region-pulse 1.1s ease-in-out infinite; }
 .deco-gutter {
   border-left: 3px solid var(--kc);
@@ -459,14 +754,13 @@ html[data-calm='true'] body::after {
 }
 /* Claude's "cursor": a glowing line with an arrow in the gutter. */
 .deco-cursor {
-  background: color-mix(in srgb, var(--c-accent) 26%, transparent);
-  box-shadow: inset 3px 0 0 var(--c-accent-2), 0 0 calc(var(--fx-glow) * 18px) color-mix(in srgb, var(--c-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--c-accent) 14%, transparent);
+  box-shadow: inset 2px 0 0 var(--c-accent);
 }
 .deco-cursor-glyph::before {
   content: '▶';
-  color: var(--c-accent-2);
+  color: var(--c-accent);
   font-size: 0.8em;
-  text-shadow: 0 0 8px var(--c-accent);
 }
 .deco-cursor.live { animation: cursor-blink 0.9s steps(2, jump-none) infinite; }
 @keyframes cursor-blink {
@@ -490,12 +784,12 @@ html[data-calm='true'] body::after {
   position: relative;
   border-radius: calc(var(--radius) * 0.55);
   border: 1px solid var(--c-border);
-  background: linear-gradient(180deg, var(--c-surface-hi), var(--c-surface));
+  background: var(--c-surface-hi);
   color: var(--c-text);
-  transition: opacity var(--t-med), transform var(--t-fast);
+  transition: opacity var(--t-med), border-color var(--t-fast);
   overflow: visible;
 }
-.gnode:hover { border-color: var(--c-accent-2); transform: translateY(-1px); }
+.gnode:hover { border-color: var(--c-accent-2); }
 .gnode-folder { border-style: dashed; border-width: 1.5px; background: var(--c-bg-alt); }
 .gnode-fn, .gnode-method { border-radius: 999px; }
 .gnode-class { border-color: color-mix(in srgb, var(--k-search) 60%, var(--c-border)); }
@@ -571,7 +865,7 @@ html[data-calm='true'] body::after {
 :root { --hud-h: 3.1rem; }
 .avatar {
   overflow: visible;
-  filter: drop-shadow(0 0 calc(var(--fx-glow) * 9px) color-mix(in srgb, var(--c-accent) 70%, transparent));
+  filter: drop-shadow(0 0 calc(var(--fx-glow) * 6px) color-mix(in srgb, var(--c-accent) 60%, transparent));
   animation: avatar-float 3.4s ease-in-out infinite;
 }
 @keyframes avatar-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
@@ -589,7 +883,6 @@ html[data-calm='true'] body::after {
 .avatar-glitching .mouth-glitch { display: block; }
 .avatar-idle .blush, .avatar-thinking .blush, .avatar-working .blush, .avatar-done .blush { display: block; }
 .avatar-thinking .thought { display: block; animation: avatar-thought 1.4s ease-in-out infinite; }
-.avatar-done .sparkles { display: block; }
 /* mood animations */
 .avatar-idle .eyes-open { animation: avatar-blink 4.6s infinite; transform-origin: 50px 50px; }
 @keyframes avatar-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }

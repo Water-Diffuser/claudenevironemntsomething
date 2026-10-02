@@ -4,13 +4,13 @@ import type { ReactNode } from 'react';
 /** A titled group of controls. */
 export function Section({ title, hint, children, actions }: { title: string; hint?: string; children: ReactNode; actions?: ReactNode }) {
   return (
-    <section className="border-b border-line px-4 py-3">
-      <div className="mb-2 flex items-center gap-2">
-        <h3 className="font-display text-[0.8rem] uppercase tracking-[0.16em] text-accent-2">{title}</h3>
+    <section className="border-b border-line px-4 py-4">
+      <div className="mb-3 flex items-center gap-2">
+        <h3 className="eyebrow m-0">{title}</h3>
         <div className="ml-auto">{actions}</div>
       </div>
-      {hint && <p className="mb-2 text-xs text-dim">{hint}</p>}
-      <div className="space-y-2.5">{children}</div>
+      {hint && <p className="mb-3 mt-0 text-xs text-dim">{hint}</p>}
+      <div className="space-y-3">{children}</div>
     </section>
   );
 }
@@ -28,7 +28,7 @@ export function Slider({
 }) {
   return (
     <label className="block text-xs">
-      <span className="flex justify-between text-dim">
+      <span className="mb-1 flex justify-between text-dim">
         {label}
         <span className="font-mono text-ink">{format ? format(value) : value}</span>
       </span>
@@ -43,7 +43,7 @@ export function ColorField({ label, value, onChange }: { label: string; value: s
   const hex = /^#[0-9a-f]{6}$/i.test(value) ? value : '#000000';
   return (
     <label className="flex items-center gap-2 text-xs">
-      <input type="color" value={hex} onChange={(e) => onChange(e.target.value)} className="h-6 w-8 shrink-0 cursor-pointer rounded border border-line bg-transparent p-0" />
+      <input type="color" value={hex} onChange={(e) => onChange(e.target.value)} className="h-6 w-8 shrink-0 cursor-pointer rounded-md border border-line bg-transparent p-0" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="font-mono text-dim">{hex}</span>
     </label>

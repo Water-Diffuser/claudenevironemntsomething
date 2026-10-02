@@ -32,7 +32,7 @@ export function FrameChain({ frames }: { frames: StackFrame[] }) {
             {/* the line connecting the frames */}
             {i < shown.length - 1 && <span className="absolute left-[0.62rem] top-5 h-[calc(100%-0.25rem)] w-px bg-line" aria-hidden />}
             <span className={`absolute left-1 top-[0.55rem] grid size-[0.9rem] place-items-center rounded-full border ${i === 0 ? 'border-bad bg-bad/20 text-bad' : 'border-line bg-surface text-dim'}`} aria-hidden>
-              {i === 0 ? <Flame size={9} /> : <span className="text-[0.55rem]">{i}</span>}
+              {i === 0 ? <Flame size={9} /> : <span className="text-xs">{i}</span>}
             </span>
             <button
               onClick={() => open(f)}
@@ -40,8 +40,8 @@ export function FrameChain({ frames }: { frames: StackFrame[] }) {
               className={`mb-1 block w-full rounded-md border px-2 py-1 text-left transition ${f.external ? 'border-transparent opacity-50' : i === 0 ? 'border-bad/60 bg-bad/10 hover:border-bad' : 'border-line bg-surface/60 hover:border-accent'}`}
               title={f.raw}
             >
-              {f.fn && <div className="truncate font-mono text-[0.78rem] font-semibold">{f.fn}()</div>}
-              <div className="truncate font-mono text-[0.7rem] text-dim">
+              {f.fn && <div className="truncate font-mono text-sm font-semibold">{f.fn}()</div>}
+              <div className="truncate font-mono text-xs text-dim">
                 {f.file}:{f.line}
                 {f.col ? `:${f.col}` : ''}
               </div>

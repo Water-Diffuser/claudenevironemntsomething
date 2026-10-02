@@ -18,6 +18,7 @@ import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import { config } from '@config';
 import type { FsEntry, FsListing } from '@shared/protocol';
+import { FileError, revertEdit, safeResolve, saveFile, type RevertRequest, type SaveRequest } from './files';
 import { Runtime } from './runtime';
 import { loadSettings, saveSettings } from './store/jsonStore';
 
@@ -86,16 +87,21 @@ app.get('/api/fs/list', (req, res) => {
   res.json(listing);
 });
 
-// ---- read one project file (for the code view) ---------------------------------
+// ---- read, save and undo (the editor and the diff's Keep / Revert buttons) -----------
 const MAX_VIEW_BYTES = 2_000_000;
+
+/** Turn a FileError into a JSON error response; anything else is a 500. */
+function fileFail(res: express.Response, err: unknown) {
+  if (err instanceof FileError) return void res.status(err.status).json({ error: err.message, code: err.code });
+  res.status(500).json({ error: String((err as Error)?.message ?? err), code: 'server_error' });
+}
+
 app.get('/api/file', (req, res) => {
   const cwd = runtime.state.cwd;
   const rel = typeof req.query.path === 'string' ? req.query.path : '';
   if (!cwd || !rel) return void res.status(400).json({ error: 'no project or path' });
-  const abs = path.resolve(cwd, rel);
-  // Only files inside the open project (blocks "../../etc/passwd" style paths).
-  if (abs !== cwd && !abs.startsWith(cwd + path.sep)) return void res.status(403).json({ error: 'outside the project' });
   try {
+    const abs = safeResolve(cwd, rel); // only files inside the open project
     const st = fs.statSync(abs);
     if (!st.isFile()) return void res.json({ missing: true });
     const fd = fs.openSync(abs, 'r');
@@ -104,9 +110,32 @@ app.get('/api/file', (req, res) => {
     fs.closeSync(fd);
     if (buf.subarray(0, 8000).includes(0)) return void res.json({ binary: true });
     res.json({ path: rel, content: buf.toString('utf8'), size: st.size, truncated: st.size > MAX_VIEW_BYTES, mtime: st.mtimeMs });
-  } catch {
+  } catch (err) {
+    if (err instanceof FileError) return fileFail(res, err);
     // (200, not 404, so the browser console doesn't log an error for a file that simply isn't there yet)
     res.json({ missing: true });
+  }
+});
+
+// Save a file (the editor's Save). Refuses if the file changed on disk since you opened it.
+app.put('/api/file', (req, res) => {
+  const cwd = runtime.state.cwd;
+  if (!cwd) return void res.status(400).json({ error: 'no project open', code: 'no_project' });
+  try {
+    res.json({ ok: true, ...saveFile(cwd, req.body as SaveRequest) });
+  } catch (err) {
+    fileFail(res, err);
+  }
+});
+
+// Undo one of Claude's edits (the diff's Revert button).
+app.post('/api/revert', (req, res) => {
+  const cwd = runtime.state.cwd;
+  if (!cwd) return void res.status(400).json({ error: 'no project open', code: 'no_project' });
+  try {
+    res.json({ ok: true, ...revertEdit(cwd, req.body as RevertRequest) });
+  } catch (err) {
+    fileFail(res, err);
   }
 });
 

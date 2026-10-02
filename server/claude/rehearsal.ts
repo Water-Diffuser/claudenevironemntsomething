@@ -18,6 +18,10 @@ interface RehearsalCtx {
   signal: AbortSignal;
   /** "default" asks before edits/commands, "acceptEdits" only before commands, "plan" never changes anything. */
   permissionMode: 'default' | 'acceptEdits' | 'plan';
+  /** What the pickers say. Rehearsal can't use them, but it echoes them so you can see they arrived. */
+  model: string | null;
+  effort: string | null;
+  thinking: string;
   canUseTool: CanUseTool;
   /** Called for each message we "receive from Claude". */
   push: (msg: SDKMessage) => void;
@@ -156,7 +160,7 @@ export async function runRehearsal(ctx: RehearsalCtx): Promise<void> {
   const { signal, push } = ctx;
   const { all, readme, source } = pickFiles(ctx.cwd);
   const edit = pickEditLine(ctx.cwd, source);
-  const model = 'rehearsal-voice';
+  const model = ctx.model ? `rehearsal-${ctx.model}` : 'rehearsal-voice';
   const started = Date.now();
   let context = 6200 + Math.floor(Math.random() * 800);
   let outTokens = 0;
@@ -220,7 +224,7 @@ export async function runRehearsal(ctx: RehearsalCtx): Promise<void> {
   };
 
   // --- Act 1: look around ---------------------------------------------------
-  await say(`Understood: "${ctx.prompt.slice(0, 140)}". This is a rehearsal: I'll walk through your project like a real session, but I won't actually touch a thing.\n\nFirst I'll **taste the structure** before changing anything.`);
+  await say(`Understood: "${ctx.prompt.slice(0, 140)}". This is a rehearsal: I'll walk through your project like a real session, but I won't actually touch a thing.\n\n_Picked for this message: model **${ctx.model ?? 'default'}**, effort **${ctx.effort ?? 'auto'}**, thinking **${ctx.thinking}**._\n\nFirst I'll **taste the structure** before changing anything.`);
 
   await useTool('TodoWrite', {
     todos: [

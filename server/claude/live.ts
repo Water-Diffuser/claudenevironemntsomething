@@ -8,6 +8,7 @@
 // ============================================================================
 import { query, type CanUseTool, type Query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { config } from '@config';
+import type { EffortLevel, ThinkingChoice } from '@shared/models';
 import type { PermissionModeName } from '@shared/protocol';
 
 export interface LiveCtx {
@@ -16,6 +17,10 @@ export interface LiveCtx {
   /** Claude's session id to continue, or null to start a fresh conversation. */
   resumeId: string | null;
   permissionMode: PermissionModeName;
+  /** The model, effort and thinking picked in the composer (null = leave it to Claude Code's own default). */
+  model: string | null;
+  effort: EffortLevel | null;
+  thinking: ThinkingChoice;
   abort: AbortController;
   canUseTool: CanUseTool;
   /** Called with the running query, so the Stop button can call interrupt() on it. */
@@ -54,6 +59,11 @@ export async function runLive(ctx: LiveCtx): Promise<void> {
       // Stream text word-by-word instead of waiting for whole messages.
       includePartialMessages: true,
       permissionMode: ctx.permissionMode,
+      // The pickers next to the message box. Each message is its own query(), so a change
+      // you make takes effect from your next message. (Leaving a field out = Claude's default.)
+      model: ctx.model ?? undefined,
+      effort: ctx.effort ?? undefined,
+      thinking: ctx.thinking === 'off' ? { type: 'disabled' } : undefined,
       // Called whenever Claude wants to do something that is not pre-approved.
       // Our version pops up the "May I?" window and waits for your answer.
       canUseTool: ctx.canUseTool,

@@ -8,12 +8,35 @@ import { useApp } from '../state/store';
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : JSON.stringify(v));
 
 function Block({ children, tone }: { children: React.ReactNode; tone?: 'add' | 'del' }) {
-  const toneClass = tone === 'add' ? 'bg-k-create/12 border-k-create/50' : tone === 'del' ? 'bg-k-delete/12 border-k-delete/50' : 'bg-bg/60 border-line';
-  return <pre className={`m-0 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-md border p-2 font-mono text-[0.78rem] leading-snug ${toneClass}`}>{children}</pre>;
+  const toneClass = tone === 'add' ? 'bg-k-create/10 border-k-create/40' : tone === 'del' ? 'bg-k-delete/10 border-k-delete/40' : 'bg-bg border-line';
+  return <pre className={`m-0 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-md border p-2 font-mono text-sm leading-snug ${toneClass}`}>{children}</pre>;
+}
+
+/** Removed lines in red with a "-", added lines in green with a "+", like a git diff. */
+function DiffBlock({ oldText, newText, max = 900 }: { oldText: string; newText: string; max?: number }) {
+  const cut = (t: string) => (t.length > max ? t.slice(0, max) + '…' : t);
+  const olds = oldText === '' ? [] : cut(oldText).split('\n');
+  const news = newText === '' ? [] : cut(newText).split('\n');
+  return (
+    <pre className="m-0 max-h-60 overflow-auto rounded-md border border-line bg-bg py-1 font-mono text-xs leading-snug">
+      {olds.map((l, i) => (
+        <div key={'o' + i} className="whitespace-pre-wrap break-words bg-k-delete/15 px-2 text-k-delete">
+          <span className="select-none opacity-70">- </span>
+          {l}
+        </div>
+      ))}
+      {news.map((l, i) => (
+        <div key={'n' + i} className="whitespace-pre-wrap break-words bg-k-create/15 px-2 text-k-create">
+          <span className="select-none opacity-70">+ </span>
+          {l}
+        </div>
+      ))}
+    </pre>
+  );
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="mb-1 mt-2 break-all font-mono text-[0.72rem] text-dim first:mt-0">{children}</div>;
+  return <div className="mb-1 mt-2 break-all font-mono text-xs text-dim first:mt-0">{children}</div>;
 }
 
 /** Long text, collapsed to `max` characters until you click. */
@@ -49,9 +72,7 @@ export function ToolInput({ tool, input }: { tool: string; input: Record<string,
       return (
         <>
           <Label>{rel(input.file_path)}</Label>
-          <Block tone="del"><Clamp text={str(input.old_string)} max={900} /></Block>
-          <div className="h-1" />
-          <Block tone="add"><Clamp text={str(input.new_string)} max={900} /></Block>
+          <DiffBlock oldText={str(input.old_string)} newText={str(input.new_string)} />
         </>
       );
     case 'MultiEdit': {
@@ -61,9 +82,7 @@ export function ToolInput({ tool, input }: { tool: string; input: Record<string,
           <Label>{rel(input.file_path)}</Label>
           {edits.slice(0, 6).map((e, i) => (
             <div key={i} className="mb-2">
-              <Block tone="del"><Clamp text={str(e.old_string)} max={500} /></Block>
-              <div className="h-1" />
-              <Block tone="add"><Clamp text={str(e.new_string)} max={500} /></Block>
+              <DiffBlock oldText={str(e.old_string)} newText={str(e.new_string)} max={500} />
             </div>
           ))}
           {edits.length > 6 && <div className="text-dim text-xs">…and {edits.length - 6} more edits</div>}
@@ -100,7 +119,7 @@ export function ToolInput({ tool, input }: { tool: string; input: Record<string,
           {entries.map(([k, v]) => (
             <div key={k} className="contents">
               <dt className="text-dim">{k}</dt>
-              <dd className="m-0 break-words font-mono text-[0.78rem]">
+              <dd className="m-0 break-words font-mono text-sm">
                 <Clamp text={typeof v === 'string' ? v : JSON.stringify(v)} max={600} />
               </dd>
             </div>

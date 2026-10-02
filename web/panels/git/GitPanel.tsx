@@ -47,7 +47,7 @@ function ChangeBlocks({ changes }: { changes: GitChange[] }) {
           />
         );
       })}
-      {changes.length > 300 && <span className="self-center text-[0.68rem] text-dim">+{changes.length - 300} more</span>}
+      {changes.length > 300 && <span className="self-center text-xs text-dim">+{changes.length - 300} more</span>}
     </div>
   );
 }
@@ -57,9 +57,9 @@ function Refs({ refs }: { refs: string[] }) {
     <>
       {refs.slice(0, 3).map((r) => {
         const isHead = r.startsWith('HEAD -> ');
-        const name = r.replace(/^HEAD -> /, '').replace(/^tag: /, '🏷 ');
+        const name = r.replace(/^HEAD -> /, '').replace(/^tag: /, 'tag · ');
         return (
-          <span key={r} className={`shrink-0 rounded-full border px-1.5 text-[0.62rem] ${isHead ? 'border-accent bg-accent/15 text-accent-2' : 'border-line text-dim'}`}>
+          <span key={r} className={`shrink-0 rounded-full border px-1.5 text-xs ${isHead ? 'border-accent text-accent' : 'border-line text-dim'}`}>
             {name}
           </span>
         );
@@ -84,7 +84,7 @@ export default function GitPanel() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-3 py-1.5 text-xs">
-        <span className="inline-flex items-center gap-1 font-mono font-semibold text-accent-2">
+        <span className="inline-flex items-center gap-1 font-mono text-ink">
           <GitBranch size={13} /> {git.branch ?? '(detached)'}
         </span>
         {git.ahead > 0 && (
@@ -104,7 +104,7 @@ export default function GitPanel() {
         </span>
       </div>
       <div className="shrink-0 border-b border-line">
-        <div className="px-3 pt-1.5 text-[0.62rem] uppercase tracking-wider text-dim">Working tree</div>
+        <div className="px-3 pt-1.5 text-xs uppercase tracking-wider text-dim">Working tree</div>
         <ChangeBlocks changes={git.changes} />
       </div>
 
@@ -123,8 +123,8 @@ export default function GitPanel() {
                       {c.message}
                     </span>
                     <Refs refs={c.refs} />
-                    {(claudeShas.has(c.sha) || c.virtual) && <span className="shrink-0 rounded-full bg-accent px-1.5 text-[0.58rem] font-bold uppercase tracking-wider text-on-accent">claude</span>}
-                    <span className="ml-auto shrink-0 text-[0.66rem] text-dim">
+                    {(claudeShas.has(c.sha) || c.virtual) && <span className="chip shrink-0 border-accent text-accent">claude</span>}
+                    <span className="ml-auto shrink-0 text-xs text-dim">
                       {c.virtual ? 'rehearsal' : baseName(c.author.split(' ')[0])} · {timeAgo(c.ts * 1000)}
                     </span>
                   </div>

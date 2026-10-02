@@ -5,6 +5,7 @@
 // ============================================================================
 import type { Kind, SessionEvent } from './events.ts';
 import type { GitState } from './git.ts';
+import type { CommandChoice, EffortLevel, ModelChoice, ThinkingChoice } from './models.ts';
 import type { ProjectScan, ScanPatch } from './scan.ts';
 
 /** "live" talks to the real Claude Code. "rehearsal" plays a scripted fake session. */
@@ -59,6 +60,16 @@ export interface ServerState {
   /** Where Claude's credentials come from, once known (e.g. "ANTHROPIC_API_KEY"). */
   authSource?: string;
   permissionMode: PermissionModeName;
+  /** The model you picked for your next message. null = "Default" (Claude Code's own choice). */
+  model: string | null;
+  /** The effort you picked. null = "Auto" (the model's own default). Always legal for `model`. */
+  effort: EffortLevel | null;
+  thinking: ThinkingChoice;
+  /** The models you can choose from (Claude's real list in Live mode, the config list otherwise). */
+  models: ModelChoice[];
+  modelsSource: 'claude' | 'fallback';
+  /** Claude Code's own slash commands and skills (for the "/" menu). */
+  commands: CommandChoice[];
   sessionId: string | null;
   busy: boolean;
   recentProjects: string[];
@@ -85,6 +96,9 @@ export type ServerMsg =
   /** Streaming text for a side question. */
   | { t: 'side_delta'; id: string; text?: string; /** clear what was shown so far (Claude is going to use a tool first) */ reset?: boolean; /** a short progress line, e.g. "Reading src/app.ts" */ status?: string }
   | { t: 'side_end'; id: string; ok: boolean; error?: string; costUsd?: number }
+  /** Output from a command you started in the Terminal panel. */
+  | { t: 'term_data'; id: string; text: string }
+  | { t: 'term_exit'; id: string; code: number | null; signal: string | null; ms: number }
   | { t: 'error'; message: string };
 
 // ---- browser -> server ------------------------------------------------------
@@ -104,10 +118,19 @@ export type ClientMsg =
   | { t: 'resume'; sessionId: string }
   | { t: 'set_mode'; mode: Mode }
   | { t: 'set_permission_mode'; mode: PermissionModeName }
+  /** Pick the model for your next message (null or "default" = Claude Code's own choice). */
+  | { t: 'set_model'; model: string | null }
+  | { t: 'set_effort'; effort: EffortLevel | null }
+  | { t: 'set_thinking'; thinking: ThinkingChoice }
+  /** Ask Claude again which models are available. */
+  | { t: 'refresh_models' }
   | { t: 'refresh_sessions' }
   /** Ask Claude a side question (explain a file/function, or sketch the architecture). Never touches your project. */
   | { t: 'side'; id: string; kind: SideKind; target?: SideTarget }
-  | { t: 'side_cancel'; id: string };
+  | { t: 'side_cancel'; id: string }
+  /** Run a shell command in the project (the Terminal panel). `id` is chosen by the browser. */
+  | { t: 'term_run'; id: string; command: string }
+  | { t: 'term_kill'; id: string };
 
 export type SideKind = 'explain' | 'sketch';
 

@@ -93,7 +93,7 @@ export function drawMap(o: DrawOpts): number | null {
 
   const glowing: Array<{ x: number; y: number; w: number; h: number; color: string; i: number }> = [];
   const monoFont = `10px ${c.fontMono}`;
-  const folderFont = `600 10px ${c.fontDisplay}`;
+  const folderFont = `10px ${c.fontMono}`;
   const charPx = 6; // width of one 10px monospace character
 
   for (const cell of layout.cells) {
@@ -111,8 +111,8 @@ export function drawMap(o: DrawOpts): number | null {
       ctx.fillStyle = cell.depth % 2 ? mix(c.bg, 78, c.bgAlt) : mix(c.bgAlt, 80, c.surface);
       roundedRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, corner);
       ctx.fill();
-      ctx.lineWidth = bold ? 1.6 : 1;
-      ctx.strokeStyle = bold ? mix(c.textDim, 70) : mix(c.border, 100);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = bold ? mix(c.textDim, 45) : mix(c.border, 100);
       ctx.stroke();
 
       // a touched folder (e.g. Claude searched inside it) gets a glowing outline
@@ -129,16 +129,14 @@ export function drawMap(o: DrawOpts): number | null {
 
       if (h > LABEL_H + 6 && w > 34) {
         ctx.font = folderFont;
-        const label = fit(n.name.toUpperCase(), w - 12, charPx);
+        const label = fit(n.name, w - 12, charPx);
         if (label) {
           ctx.fillStyle = mix(c.bg, 60);
           const tw = Math.min(w - 4, label.length * charPx + 8);
           ctx.fillRect(x + 2, y + 2, tw, LABEL_H - 3);
-          ctx.fillStyle = bold ? c.accent2 : c.textDim;
+          ctx.fillStyle = bold ? c.text : c.textDim;
           ctx.textBaseline = 'middle';
-          if ('letterSpacing' in ctx) (ctx as unknown as { letterSpacing: string }).letterSpacing = '0.6px';
           ctx.fillText(label, x + 6, y + LABEL_H / 2 + 0.5);
-          if ('letterSpacing' in ctx) (ctx as unknown as { letterSpacing: string }).letterSpacing = '0px';
         }
       }
       continue;
@@ -186,7 +184,7 @@ export function drawMap(o: DrawOpts): number | null {
       // the light-up: the touch color flooding the cell
       if (t && inten > 0) {
         const color = c.kind[t.kind];
-        ctx.globalAlpha = Math.min(1, 0.16 + 0.7 * inten);
+        ctx.globalAlpha = Math.min(1, 0.1 + 0.45 * inten);
         ctx.fillStyle = color;
         roundedRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, corner);
         ctx.fill();
@@ -199,7 +197,7 @@ export function drawMap(o: DrawOpts): number | null {
     if (w > 44 && h > 13) {
       ctx.font = monoFont;
       ctx.textBaseline = 'top';
-      ctx.fillStyle = t && inten > 0.55 ? c.bg : c.text;
+      ctx.fillStyle = c.text;
       ctx.globalAlpha = o.dimUntouched && !t ? 0.45 : 0.92;
       ctx.fillText(fit(n.name, w - 8, charPx), x + 4, y + 3);
       if (h > 27 && w > 56 && !n.ghost) {

@@ -3,7 +3,7 @@
 //  Click something on the map or graph, then press Explain. A separate, read-only
 //  Claude call writes it (see server/claude/side.ts); it never touches your code.
 // ============================================================================
-import { Loader2, RotateCw, Sparkles, Square } from 'lucide-react';
+import { Loader2, RotateCw, NotebookPen, Square } from 'lucide-react';
 import { Markdown } from '../../components/Markdown';
 import { askExplain, cancelSide, useSide } from '../../state/side';
 import { send } from '../../state/store';
@@ -24,11 +24,11 @@ export default function ExplainPanel() {
     <div className="flex h-full min-h-0 flex-col">
       {target && !alreadyShown && (
         <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-2 text-xs">
-          <span className="min-w-0 truncate font-mono text-accent-2" title={targetName ?? ''}>
+          <span className="min-w-0 truncate font-mono text-ink" title={targetName ?? ''}>
             {targetName}
           </span>
           <button className="btn btn-primary ml-auto !px-2.5 !py-1 text-xs" onClick={() => askExplain(send, target)}>
-            <Sparkles size={13} /> Explain
+            <NotebookPen size={13} /> Explain
           </button>
         </div>
       )}
@@ -37,15 +37,15 @@ export default function ExplainPanel() {
         {!current ? (
           <div className="grid h-full place-items-center p-4 text-center text-dim">
             <div>
-              <Sparkles className="mx-auto mb-2 text-accent" size={24} />
-              <div className="mb-1 font-display text-lg text-accent-2">Pick something to understand</div>
+              <NotebookPen className="mx-auto mb-2 text-accent" size={24} />
+              <div className="mb-1 empty-title !text-lg">Pick something to understand</div>
               Click a file on the map, or a file or function in the graph, then press <b>Explain</b>. You get a short plain-English summary.
             </div>
           </div>
         ) : (
           <>
             <div className="mb-1 flex items-center gap-2">
-              <h3 className="m-0 min-w-0 truncate font-mono text-sm font-semibold text-accent-2" title={current.title}>
+              <h3 className="m-0 min-w-0 truncate font-mono text-sm text-ink" title={current.title}>
                 {current.title}
               </h3>
               {current.state === 'running' ? (
@@ -69,7 +69,7 @@ export default function ExplainPanel() {
             {current.state === 'running' && current.text && current.status && <div className="mb-1 text-xs text-dim">{current.status}</div>}
             {current.text && <Markdown text={current.text} />}
             {current.state === 'error' && current.error !== 'cancelled' && <div className="mt-2 rounded-md border border-bad/60 bg-bad/10 px-3 py-2 text-sm text-bad">{current.error}</div>}
-            {current.state === 'done' && current.costUsd ? <div className="mt-2 text-[0.68rem] text-dim">cost ${current.costUsd.toFixed(3)}</div> : null}
+            {current.state === 'done' && current.costUsd ? <div className="mt-2 text-xs text-dim">cost ${current.costUsd.toFixed(3)}</div> : null}
           </>
         )}
       </div>

@@ -1,101 +1,129 @@
-// The strip across the top: logo, project, mode, permission mode, connection light.
-import { FolderOpen, PanelLeft, Radio, SlidersHorizontal, Theater } from 'lucide-react';
+// ============================================================================
+//  The top bar: ONE quiet row.
+//    left   sessions button, wordmark, project
+//    right  the HUD meters, live/rehearsal, layout menu, sound, settings, connection light
+//  Anything that is only changed now and then (permission mode, model, effort) lives
+//  next to the message box instead, where you actually use it.
+//  The 2px "on air" line along the bottom edge sweeps while Claude is working.
+// ============================================================================
+import { Check, ChevronDown, FolderOpen, History, LayoutGrid, MoveDiagonal, PanelLeft, Radio, SlidersHorizontal, Theater } from 'lucide-react';
 import { config } from '@config';
-import type { Mode, PermissionModeName } from '@shared/protocol';
 import { send, useApp, useView } from '../state/store';
 import { goLive } from '../state/replay';
-import { useLabel, useSettings } from '../state/settings';
+import { isFeatureOn, useLabel, useSettings } from '../state/settings';
 import { useUI } from '../state/ui';
-import { allLayouts, switchLayout } from '../settings/layouts';
+import { allLayouts, currentLayoutKey, switchLayout } from '../settings/layouts';
+import { HudBar } from './HudBar';
+import { Menu, MenuItem, MenuLabel, MenuSeparator } from './Menu';
 import { SoundControl } from './SoundControl';
-
-const PERMISSION_LABELS: Record<PermissionModeName, string> = {
-  default: 'Ask me first',
-  acceptEdits: 'Auto-accept edits',
-  plan: 'Plan only',
-};
 
 export function TopBar() {
   const server = useApp((s) => s.server);
   const conn = useApp((s) => s.conn);
   const openPicker = useUI((s) => s.openPicker);
-  const sidebarOpen = useSettings((s) => s.ui.sidebarOpen);
-  const update = useSettings((s) => s.update);
+  const arranging = useUI((s) => s.arranging);
+  const setArranging = useUI((s) => s.setArranging);
   const ui = useSettings((s) => s.ui);
+  const update = useSettings((s) => s.update);
   const settingsOpen = useUI((s) => s.settingsOpen);
   const openSettings = useUI((s) => s.openSettings);
   const settingsLabel = useLabel('settings');
-  const project = useLabel('project');
+  const projectLabel = useLabel('project');
+  const setlistLabel = useLabel('setlist');
   const busy = !!server?.busy;
   const replaying = useView((s) => !!s.replay);
   const name = server?.cwd?.split('/').filter(Boolean).pop();
-
-  const modeBtn = (mode: Mode, Icon: typeof Radio, title: string) => (
-    <button
-      key={mode}
-      title={title}
-      disabled={busy}
-      onClick={() => send({ t: 'set_mode', mode })}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider transition ${server?.mode === mode ? 'bg-accent text-on-accent' : 'text-dim hover:text-ink'}`}
-    >
-      <Icon size={13} /> <span className="max-lg:hidden">{mode}</span>
-    </button>
-  );
+  const live = server?.mode === 'live';
+  const layoutKey = currentLayoutKey(ui);
 
   return (
-    <header className="gloss flex h-[var(--topbar-h)] shrink-0 items-center gap-3 overflow-hidden border-b border-line bg-surface/80 px-3 max-lg:gap-2">
-      <button className="btn btn-ghost !p-1.5" onClick={() => update({ sidebarOpen: !sidebarOpen })} aria-label="Toggle setlist" title="Toggle setlist">
-        <PanelLeft size={18} />
-      </button>
-      <div className="glitch glow-text font-display text-xl font-semibold tracking-[0.18em] text-accent max-md:hidden" data-text={config.app.name}>
-        {config.app.name}
-      </div>
-      <span className="hidden text-xs italic text-dim xl:inline">{config.app.tagline}</span>
-
-      <button className="btn min-w-0 max-w-[22rem] !py-1 lg:ml-2" onClick={() => openPicker(true)} title={server?.cwd ?? `Choose a ${project}`}>
-        <FolderOpen size={16} className="shrink-0 text-accent" />
-        <span className="truncate">{name ?? `Choose a ${project}`}</span>
+    <header className="relative z-30 flex shrink-0 items-center gap-2 border-b border-line bg-bg-alt px-3" style={{ height: 'var(--topbar-h)' }}>
+      <button className="icon-btn" aria-label={`${setlistLabel} (your sessions)`} title={`${setlistLabel}: your sessions`} aria-pressed={ui.sidebarOpen} onClick={() => update({ sidebarOpen: !ui.sidebarOpen })}>
+        <PanelLeft size={17} />
       </button>
 
-      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-3 max-lg:gap-2">
-        <select
-          className="field !w-auto !py-1 text-xs max-lg:max-w-[7.5rem]"
-          value={server?.permissionMode ?? 'default'}
-          onChange={(e) => send({ t: 'set_permission_mode', mode: e.target.value as PermissionModeName })}
-          aria-label="Permission mode"
-          title="How much may Claude do without asking?"
-        >
-          {(Object.keys(PERMISSION_LABELS) as PermissionModeName[]).map((m) => (
-            <option key={m} value={m}>
-              {PERMISSION_LABELS[m]}
-            </option>
-          ))}
-        </select>
-        <div className="flex overflow-hidden rounded-[var(--radius)] border border-line" role="group" aria-label="Mode">
-          {modeBtn('live', Radio, server?.liveAvailable ? 'Real Claude Code' : 'Real Claude (no credentials found yet)')}
-          {modeBtn('rehearsal', Theater, 'Scripted fake session: free, touches nothing')}
-        </div>
-        {replaying && (
-          <button className="btn btn-primary !px-2.5 !py-1 text-xs" onClick={goLive} title="You are looking at the past. Click to return to now.">
-            ⏪ REPLAY · back to live
-          </button>
-        )}
-        <select className="field !w-auto !py-1 text-xs max-lg:max-w-[6.5rem]" value={ui.layout} onChange={(e) => switchLayout(e.target.value)} aria-label="Layout" title="Switch layout">
-          {Object.entries(allLayouts(ui)).map(([key, l]) => (
-            <option key={key} value={key}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-        <SoundControl />
-        <button className={`btn !px-2 !py-1 ${settingsOpen ? 'border-accent text-accent-2' : ''}`} onClick={() => openSettings(!settingsOpen)} aria-expanded={settingsOpen} aria-label={settingsLabel} title={settingsLabel}>
-          <SlidersHorizontal size={16} />
-        </button>
-        <span className="flex items-center gap-1.5 text-xs text-dim" title={`backend: ${conn}`}>
-          <span className={`inline-block size-2 rounded-full ${conn === 'open' ? 'bg-good' : conn === 'connecting' ? 'animate-pulse bg-warn' : 'bg-bad'}`} />
-          <span className="max-xl:hidden">{conn === 'open' ? (busy ? 'working' : 'ready') : conn}</span>
+      {/* the wordmark: serif capitals with a small "record light" in front */}
+      <div className="flex shrink-0 items-center gap-2 pr-1 max-md:hidden" title={config.app.tagline}>
+        <span className="size-1.5 rounded-full bg-accent glow" aria-hidden />
+        <span className="glitch font-display text-base font-semibold uppercase tracking-[0.24em]" data-text={config.app.name}>
+          {config.app.name}
         </span>
       </div>
+
+      <button className="btn min-w-0 max-w-[13rem]" onClick={() => openPicker(true)} title={server?.cwd ?? `Choose a ${projectLabel}`}>
+        <FolderOpen size={14} className="shrink-0 text-dim" />
+        <span className="truncate">{name ?? `Choose a ${projectLabel}`}</span>
+      </button>
+
+      {replaying && (
+        <button className="btn btn-primary" onClick={goLive} title="You are looking at the past. Click to return to now.">
+          <History size={14} /> <span className="max-lg:hidden">Back to live</span>
+        </button>
+      )}
+      {arranging && (
+        <button className="btn btn-primary" onClick={() => setArranging(false)} title="Finish moving panels around">
+          <Check size={14} /> Done arranging
+        </button>
+      )}
+
+      <div className="ml-auto flex min-w-0 items-center gap-3">
+        {isFeatureOn(ui, 'hud') && <HudBar />}
+
+        <div className="flex items-center gap-1">
+          {/* live <-> rehearsal */}
+          <button
+            className="btn !px-2"
+            disabled={busy}
+            onClick={() => send({ t: 'set_mode', mode: live ? 'rehearsal' : 'live' })}
+            title={live ? 'Real Claude Code is answering. Click to switch to Rehearsal (a scripted fake session: free, touches nothing).' : server?.liveAvailable ? 'Rehearsal: a scripted fake session that touches nothing. Click to switch to real Claude Code.' : 'Rehearsal: a scripted fake session. Click to try real Claude (no credentials found yet).'}
+            aria-label={`Mode: ${live ? 'live' : 'rehearsal'}. Click to switch.`}
+          >
+            {live ? <Radio size={14} className="text-accent" /> : <Theater size={14} className="text-dim" />}
+            <span className="text-xs uppercase tracking-wider max-lg:hidden">{live ? 'live' : 'rehearsal'}</span>
+          </button>
+
+          <Menu
+            label="Layout"
+            align="end"
+            trigger={({ open, toggle }) => (
+              <button className={`icon-btn ${arranging ? 'is-on' : ''}`} aria-label="Layout" title="Layout" aria-expanded={open} aria-haspopup="menu" onClick={toggle}>
+                <LayoutGrid size={16} />
+              </button>
+            )}
+          >
+            {(close) => (
+              <>
+                <MenuLabel>Layout</MenuLabel>
+                {Object.entries(allLayouts(ui)).map(([key, l]) => (
+                  <MenuItem key={key} checked={key === layoutKey} onSelect={() => (switchLayout(key), close())}>
+                    {l.label}
+                  </MenuItem>
+                ))}
+                <MenuSeparator />
+                <MenuItem icon={<MoveDiagonal size={14} />} hint="Drag panel headers to move them, drag a corner to resize." onSelect={() => (setArranging(!arranging), close())}>
+                  {arranging ? 'Stop arranging' : 'Arrange panels'}
+                </MenuItem>
+              </>
+            )}
+          </Menu>
+
+          <SoundControl />
+
+          <button className="icon-btn" aria-label={settingsLabel} title={settingsLabel} aria-expanded={settingsOpen} onClick={() => openSettings(!settingsOpen)}>
+            <SlidersHorizontal size={16} />
+          </button>
+        </div>
+
+        <span className="flex items-center" title={`backend: ${conn === 'open' ? (busy ? 'working' : 'ready') : conn}`}>
+          <span className={`inline-block size-2 rounded-full ${conn === 'open' ? 'bg-good' : conn === 'connecting' ? 'animate-pulse bg-warn' : 'bg-bad'}`} />
+          <span className="sr-only">{conn}</span>
+        </span>
+      </div>
+
+      <div className="onair" data-on={busy} aria-hidden />
     </header>
   );
 }
+
+/** Small helper used elsewhere: the dropdown arrow that sits on "pill" buttons. */
+export const Caret = () => <ChevronDown size={12} className="shrink-0 opacity-60" aria-hidden />;

@@ -5,9 +5,10 @@
 // ============================================================================
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
-import { Play } from 'lucide-react';
+import { Check, Play, Undo2 } from 'lucide-react';
 import { useScan } from '../../state/scan';
-import { useDerived } from '../../state/store';
+import { useApp, useDerived, useView } from '../../state/store';
+import { useReview } from '../../state/review';
 import { useUI } from '../../state/ui';
 import { defineIndulgentTheme, languageFor, monaco } from '../../lib/monaco';
 import { readThemeColors } from '../../lib/themeColors';
@@ -80,7 +81,7 @@ function CodeLine({ side, html }: { side: Side; html?: string }) {
 function Cell({ side, html, delay, replay }: { side?: Side; html?: string; delay: number; replay: number }) {
   if (!side) return <div className="bg-bg/30" aria-hidden />;
   const gutter = <span className="w-9 shrink-0 select-none pr-2 text-right text-dim opacity-70">{side.n || ''}</span>;
-  const base = 'relative flex min-h-[1.3rem] whitespace-pre px-1 font-mono text-[0.76rem] leading-[1.3rem]';
+  const base = 'relative flex min-h-[1.3rem] whitespace-pre px-1 font-mono text-xs leading-[1.3rem]';
 
   if (side.kind === 'ctx') {
     return (
@@ -156,6 +157,7 @@ function HunkView({ hunk, lang, editId, replay }: { hunk: Hunk; lang: string; ed
 
 export default function DiffPanel() {
   const d = useDerived();
+  const server = useApp((s) => s.server);
   const files = useScan((s) => s.files);
   const analysisVersion = useScan((s) => s.analysisVersion);
   const selectFile = useUI((s) => s.selectFile);
@@ -163,6 +165,10 @@ export default function DiffPanel() {
   const themeSettings = useSettings((s) => s.ui.theme);
   const [pinned, setPinned] = useState<string | null>(null);
   const [replay, setReplay] = useState(0);
+  const decisions = useReview((s) => s.decisions);
+  const replaying = useView((s) => !!s.replay);
+  const [sure, setSure] = useState(false); // "Revert" was clicked once: waiting for the second click
+  const [busy, setBusy] = useState(false);
 
   // Make sure Monaco's color theme exists before we ask it to color code.
   useEffect(() => {
@@ -188,46 +194,91 @@ export default function DiffPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [edit, analysisVersion]);
 
+  // The "are you sure?" state ends by itself after a few seconds, or when you look at another edit.
+  useEffect(() => {
+    if (!sure) return;
+    const t = setTimeout(() => setSure(false), 3500);
+    return () => clearTimeout(t);
+  }, [sure]);
+  useEffect(() => setSure(false), [edit?.id]);
+
   if (!edit) {
     return (
-      <div className="grid h-full place-items-center p-6 text-center text-dim">
-        <div>
-          <div className="mb-1 font-display text-lg text-accent-2">No edits yet</div>
-          When Claude changes a file, the before and after appear here, line by line.
-        </div>
+      <div className="empty">
+        <h3 className="empty-title m-0 !text-lg">No edits yet.</h3>
+        <p className="m-0 max-w-[34ch] text-sm">When Claude changes a file, the before and after appear here, and you can keep or revert each change.</p>
       </div>
     );
   }
 
+  const decision = decisions[edit.id];
+  const keep = () => useReview.getState().decide(edit.id, 'kept');
+  // Revert asks the server to put the file back. It only does so if the file still looks exactly as the edit left it.
+  const revert = async () => {
+    if (!sure) return setSure(true);
+    setSure(false);
+    setBusy(true);
+    try {
+      const res = await fetch('/api/revert', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: edit.path, type: edit.type, hunks: edit.hunks }) });
+      const out = (await res.json()) as { ok?: boolean; action?: string; error?: string };
+      if (res.ok && out.ok) {
+        useReview.getState().decide(edit.id, 'reverted');
+        useApp.getState().toast(out.action === 'deleted' ? `Removed ${edit.path}` : `Put ${edit.path} back the way it was`);
+      } else {
+        useApp.getState().toast(server?.mode === 'rehearsal' ? 'This was a rehearsal edit, so nothing really changed on disk and there is nothing to undo.' : (out.error ?? 'Could not undo this edit.'), 'error');
+      }
+    } catch (err) {
+      useApp.getState().toast(String((err as Error).message ?? err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const lang = languageFor(edit.path);
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-line px-2 py-1.5 text-xs">
-        <button className="min-w-0 truncate font-mono text-accent-2 hover:underline" title={edit.path} onClick={() => selectFile(edit.path)}>
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-3 py-2 text-xs">
+        <button className="min-w-0 truncate font-mono text-ink hover:underline" title={`Open ${edit.path}`} onClick={() => selectFile(edit.path)}>
           {edit.path}
         </button>
-        <span className="rounded border border-k-create/60 px-1.5 font-semibold text-k-create">+{edit.added}</span>
-        <span className="rounded border border-k-delete/60 px-1.5 font-semibold text-k-delete">−{edit.removed}</span>
-        {edit.type === 'create' && <span className="chip !py-0 text-k-create">new file</span>}
-        <button className="btn btn-ghost ml-auto !px-1.5 !py-0.5 text-xs" onClick={() => setReplay((n) => n + 1)} title="Play the animation again">
-          <Play size={12} /> replay
-        </button>
+        <span className="text-k-create">+{edit.added}</span>
+        <span className="text-k-delete">−{edit.removed}</span>
+        {edit.type === 'create' && <span className="chip">new file</span>}
+        <div className="ml-auto flex items-center gap-1">
+          {decision ? (
+            <span className={`chip ${decision === 'kept' ? 'text-good' : 'text-warn'}`}>{decision === 'kept' ? 'kept' : 'reverted'}</span>
+          ) : (
+            !replaying && (
+              <>
+                <button className={`btn !h-6 !px-2 text-xs ${sure ? 'border-bad text-bad' : ''}`} disabled={busy} onClick={() => void revert()} title={edit.type === 'create' ? 'Delete the file Claude created' : 'Put the file back the way it was before this edit'}>
+                  <Undo2 size={12} /> {sure ? 'Sure?' : 'Revert'}
+                </button>
+                <button className="btn btn-primary !h-6 !px-2 text-xs" onClick={keep} title="You looked at this change and it stays">
+                  <Check size={12} /> Keep
+                </button>
+              </>
+            )
+          )}
+          <button className="icon-btn icon-btn-sm" onClick={() => setReplay((n) => n + 1)} title="Play the animation again" aria-label="Replay the animation">
+            <Play size={12} />
+          </button>
+        </div>
       </div>
 
       {functions.length > 0 && (
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-line px-2 py-1 text-[0.7rem]">
-          <span className="text-dim">changed:</span>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-line px-3 py-1.5 text-xs">
+          <span className="text-dim">in</span>
           {functions.map((f) => (
-            <span key={f} className="rounded-full border border-k-edit/50 px-2 font-mono text-k-edit">
+            <span key={f} className="chip font-mono text-ink">
               {f}()
             </span>
           ))}
         </div>
       )}
 
-      <div className="grid shrink-0 grid-cols-2 gap-px bg-line/60 text-[0.62rem] uppercase tracking-widest text-dim">
-        <div className="bg-bg-alt px-2 py-0.5">before</div>
-        <div className="bg-bg-alt px-2 py-0.5">after</div>
+      <div className="eyebrow grid shrink-0 grid-cols-2 gap-px bg-line/60">
+        <div className="bg-bg-alt px-3 py-1">before</div>
+        <div className="bg-bg-alt px-3 py-1">after</div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
@@ -240,15 +291,18 @@ export default function DiffPanel() {
       </div>
 
       {edits.length > 1 && (
-        <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-t border-line px-2 py-1" aria-label="Edit history">
+        <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-t border-line px-3 py-1.5" aria-label="Edit history">
           {edits.slice(-14).map((e) => (
             <button
               key={e.id}
               onClick={() => setPinned(e.id)}
-              className={`chip shrink-0 hover:border-accent ${e.id === edit.id ? 'border-accent text-ink' : ''}`}
-              title={`${e.path} · ${timeAgo(e.ts)}`}
+              className={`chip shrink-0 transition-colors hover:text-ink ${e.id === edit.id ? 'border-accent text-ink' : ''}`}
+              title={`${e.path} · ${timeAgo(e.ts)}${decisions[e.id] ? ' · ' + decisions[e.id] : ''}`}
             >
-              {baseName(e.path)} <span className="text-k-create">+{e.added}</span> <span className="text-k-delete">−{e.removed}</span>
+              {!decisions[e.id] && <span className="size-1.5 rounded-full bg-accent" aria-label="not reviewed yet" />}
+              {decisions[e.id] === 'kept' && <Check size={10} className="text-good" aria-label="kept" />}
+              {decisions[e.id] === 'reverted' && <Undo2 size={10} className="text-warn" aria-label="reverted" />}
+              {baseName(e.path)}
             </button>
           ))}
         </div>

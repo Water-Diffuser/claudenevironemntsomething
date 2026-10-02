@@ -34,7 +34,13 @@ export interface Theme {
   /** true = dark theme (affects scrollbars and form controls). */
   dark: boolean;
   colors: ThemeColors;
-  fonts: { display: string; body: string; mono: string };
+  /**
+   * display = the wordmark and big headlines
+   * body    = running text you read (Claude's replies, explanations)
+   * ui      = the interface itself: buttons, tabs, labels, numbers (falls back to `body`)
+   * mono    = code
+   */
+  fonts: { display: string; body: string; mono: string; ui?: string };
   /** Base font size in px. The whole UI scales from this. */
   fontSize: number;
   /** Corner roundness in px. */
@@ -55,7 +61,10 @@ export interface FontChoice {
 
 /** One panel's position on the 24 x 24 layout grid. */
 export interface LayoutItem {
+  /** Which panel this cell shows. For a tab group it is just a unique name for the cell (e.g. "view"). */
   i: string;
+  /** Set this to make the cell a TAB GROUP: it shows these panels as tabs, one at a time. */
+  tabs?: string[];
   x: number;
   y: number;
   w: number;

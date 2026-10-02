@@ -31,37 +31,29 @@ export function SettingsDrawer() {
 
   return (
     <aside
-      className="drawer-in shrink-0 py-[var(--grid-gap)] pr-[var(--grid-gap)] max-lg:fixed max-lg:inset-y-0 max-lg:right-0 max-lg:z-40 max-lg:p-2"
+      className="drawer-in flex h-full w-[24rem] max-w-[100vw] shrink-0 flex-col border-l border-line bg-surface max-lg:fixed max-lg:inset-y-0 max-lg:right-0 max-lg:z-40 max-lg:shadow-[0_0_40px_rgb(0_0_0/0.55)]"
       aria-label={title}
       onKeyDown={(e) => e.key === 'Escape' && close()}
     >
-      <div className="panel gloss flex h-full w-[23rem] max-w-[calc(100vw-1rem)] flex-col">
-        <div className="panel-head">
-          <span className="truncate">{title}</span>
-          <button className="ml-auto rounded p-1 text-dim hover:text-ink" onClick={close} aria-label="Close settings">
-            <X size={15} />
-          </button>
-        </div>
-        <div className="flex shrink-0 border-b border-line" role="tablist">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={tab === t.id}
-                onClick={() => setTab(t.id)}
-                className={`flex flex-1 flex-col items-center gap-0.5 border-b-2 py-1.5 text-[0.68rem] uppercase tracking-wider transition ${tab === t.id ? 'border-accent text-accent-2' : 'border-transparent text-dim hover:text-ink'}`}
-              >
-                <Icon size={15} />
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-        <div className="panel-body min-h-0 flex-1 overflow-y-auto" role="tabpanel">
-          <Body />
-        </div>
+      <div className="panel-head">
+        <span className="panel-title">{title}</span>
+        <button className="icon-btn icon-btn-sm ml-auto" onClick={close} aria-label="Close settings">
+          <X size={15} />
+        </button>
+      </div>
+      <div className="tabs shrink-0 border-b border-line px-1" role="tablist" style={{ height: 'var(--head-h)' }}>
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className="tab" title={t.label}>
+              <Icon size={14} />
+              <span className={tab === t.id ? '' : 'hidden'}>{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto" role="tabpanel">
+        <Body />
       </div>
     </aside>
   );

@@ -3,7 +3,7 @@
 //  To add a panel: build a component, then add ONE line here, one entry in
 //  config.labels / config.features, and a position in config.layouts.
 // ============================================================================
-import { Activity, BookMarked, ChefHat, Clapperboard, Code2, Flame, FlaskConical, GitCompare, HeartPulse, PieChart, Piano, Receipt, Trophy, Map as MapIcon, Mic2, Network, NotebookPen, Radar, Ruler, type LucideIcon } from 'lucide-react';
+import { Activity, BookMarked, ChefHat, Clapperboard, Code2, Flame, FlaskConical, GitCompare, HeartPulse, PieChart, Piano, Receipt, Trophy, Map as MapIcon, Mic2, Network, NotebookPen, Radar, Ruler, SquareTerminal, type LucideIcon } from 'lucide-react';
 import { lazy, type ComponentType } from 'react';
 import type { LabelKey } from '../state/settings';
 import { BoothPanel } from './booth/BoothPanel';
@@ -27,6 +27,7 @@ const DonutPanel = lazy(() => import('./donut/DonutPanel'));
 const PitchPanel = lazy(() => import('./pitch/PitchPanel'));
 const HeartbeatPanel = lazy(() => import('./heartbeat/HeartbeatPanel'));
 const PianoRollPanel = lazy(() => import('./pianoroll/PianoRollPanel'));
+const TerminalPanel = lazy(() => import('./terminal/TerminalPanel'));
 
 export interface PanelDef {
   /** Unique id, also used in config.layouts and config.features. */
@@ -37,12 +38,16 @@ export interface PanelDef {
   component: ComponentType;
   minW?: number;
   minH?: number;
+  /** How tall the dock is (px) when it opens on this panel, until you drag it to another height. */
+  dockH?: number;
+  /** True = the panel draws its own top row (like the editor's tab strip), so the frame skips its title header. */
+  bare?: boolean;
 }
 
 export const PANELS: PanelDef[] = [
   { id: 'booth', label: 'booth', icon: Mic2, component: BoothPanel, minW: 6, minH: 6 },
   { id: 'map', label: 'map', icon: MapIcon, component: MapPanel, minW: 6, minH: 6 },
-  { id: 'code', label: 'code', icon: Code2, component: CodePanel, minW: 5, minH: 5 },
+  { id: 'code', label: 'code', icon: Code2, component: CodePanel, minW: 5, minH: 5, bare: true },
   { id: 'diff', label: 'diff', icon: GitCompare, component: DiffPanel, minW: 5, minH: 4 },
   { id: 'graph', label: 'graph', icon: Network, component: GraphPanel, minW: 6, minH: 6 },
   { id: 'impact', label: 'impact', icon: Radar, component: ImpactPanel, minW: 4, minH: 5 },
@@ -51,7 +56,7 @@ export const PANELS: PanelDef[] = [
   { id: 'tests', label: 'tests', icon: FlaskConical, component: TestsPanel, minW: 5, minH: 5 },
   { id: 'trails', label: 'trails', icon: Flame, component: TrailsPanel, minW: 4, minH: 5 },
   { id: 'git', label: 'git', icon: BookMarked, component: GitPanel, minW: 5, minH: 5 },
-  { id: 'replay', label: 'replay', icon: Clapperboard, component: ReplayPanel, minW: 6, minH: 3 },
+  { id: 'replay', label: 'replay', icon: Clapperboard, component: ReplayPanel, minW: 6, minH: 3, dockH: 150 },
   { id: 'menu', label: 'menu', icon: ChefHat, component: MenuPanel, minW: 4, minH: 5 },
   { id: 'dishes', label: 'dishes', icon: Trophy, component: DishesPanel, minW: 4, minH: 4 },
   { id: 'stats', label: 'stats', icon: Receipt, component: StatsPanel, minW: 4, minH: 5 },
@@ -59,6 +64,7 @@ export const PANELS: PanelDef[] = [
   { id: 'pitch', label: 'pitch', icon: Activity, component: PitchPanel, minW: 4, minH: 4 },
   { id: 'heartbeat', label: 'heartbeat', icon: HeartPulse, component: HeartbeatPanel, minW: 4, minH: 3 },
   { id: 'pianoroll', label: 'pianoroll', icon: Piano, component: PianoRollPanel, minW: 6, minH: 4 },
+  { id: 'terminal', label: 'terminal', icon: SquareTerminal, component: TerminalPanel, minW: 6, minH: 4, dockH: 280 },
 ];
 
 export const panelById = (id: string) => PANELS.find((p) => p.id === id);

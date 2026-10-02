@@ -1,4 +1,5 @@
 import '@fontsource-variable/fraunces';
+import '@fontsource-variable/fraunces/wght-italic.css';
 import '@fontsource-variable/nunito';
 import '@fontsource-variable/jetbrains-mono';
 import '@fontsource-variable/playfair-display';

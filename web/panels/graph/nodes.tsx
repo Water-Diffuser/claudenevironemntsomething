@@ -68,8 +68,8 @@ export const GNodeView = memo(function GNodeView({ data }: NodeProps<GFlowNode>)
       <div className="relative flex h-full items-center gap-1.5 px-2">
         <NodeIcon node={node} />
         <div className="min-w-0 leading-tight">
-          <div className="truncate font-mono text-[0.7rem] font-semibold">{node.label}</div>
-          {node.sub && <div className="truncate text-[0.58rem] text-dim">{node.sub}</div>}
+          <div className="truncate font-mono text-xs font-semibold">{node.label}</div>
+          {node.sub && <div className="truncate text-xs text-dim">{node.sub}</div>}
         </div>
       </div>
     </div>

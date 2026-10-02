@@ -16,7 +16,7 @@ export default function PitchPanel() {
     return (
       <div className="grid h-full place-items-center p-6 text-center text-dim">
         <div>
-          <div className="mb-1 font-display text-lg text-accent-2">Waiting for the first note</div>
+          <div className="mb-1 empty-title !text-lg">Waiting for the first note</div>
           Token usage is drawn here as Claude works.
         </div>
       </div>

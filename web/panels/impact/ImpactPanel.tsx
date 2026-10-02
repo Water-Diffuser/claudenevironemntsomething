@@ -44,7 +44,7 @@ export default function ImpactPanel() {
       <div className="grid h-full place-items-center p-6 text-center text-dim">
         <div>
           <Radar className="mx-auto mb-2 text-accent" size={26} />
-          <div className="mb-1 font-display text-lg text-accent-2">No ripples yet</div>
+          <div className="mb-1 empty-title !text-lg">No ripples yet</div>
           After Claude edits a file, everything that depends on it shows up here. Or click a node in the graph and press <b>What breaks?</b>
         </div>
       </div>
@@ -60,7 +60,7 @@ export default function ImpactPanel() {
       <div className="shrink-0 border-b border-line px-3 py-2">
         <div className="flex items-center gap-2 text-xs">
           <span className="text-dim">If</span>
-          <span className="min-w-0 truncate font-mono font-semibold text-accent-2" title={label}>
+          <span className="min-w-0 truncate font-mono text-ink" title={label}>
             {label}
           </span>
           <span className="text-dim">changes…</span>
@@ -70,19 +70,19 @@ export default function ImpactPanel() {
         </div>
         <div className="mt-2 flex items-end gap-3">
           <div>
-            <div className="font-display text-3xl leading-none text-accent-2 glow-text">{total}</div>
-            <div className="text-[0.66rem] uppercase tracking-wider text-dim">might be affected</div>
+            <div className="font-display text-3xl leading-none text-ink">{total}</div>
+            <div className="text-xs uppercase tracking-wider text-dim">might be affected</div>
           </div>
           <div className="flex h-10 flex-1 items-end gap-1.5" aria-label="Ripples by distance">
             {depthCounts.map((c, i) => (
               <div key={i} className="flex flex-1 flex-col items-center gap-0.5">
                 <div className="w-full rounded-sm bg-accent-2" style={{ height: `${Math.max(c ? 8 : 2, (c / max) * 30)}px`, opacity: 1 - i * 0.2 }} title={`${c} ${i === 0 ? 'directly' : `${i + 1} steps away`}`} />
-                <span className="text-[0.58rem] text-dim">{i + 1}</span>
+                <span className="text-xs text-dim">{i + 1}</span>
               </div>
             ))}
           </div>
         </div>
-        {impact.capped && <div className="mt-1 text-[0.68rem] text-warn">This ripple is huge, so the list was cut short.</div>}
+        {impact.capped && <div className="mt-1 text-xs text-warn">This ripple is huge, so the list was cut short.</div>}
       </div>
 
       {rows.length === 0 ? (
@@ -95,7 +95,7 @@ export default function ImpactPanel() {
               const pos = { position: 'absolute' as const, top: 0, left: 0, right: 0, height: v.size, transform: `translateY(${v.start}px)` };
               if (r.t === 'head') {
                 return (
-                  <div key={v.key} style={pos} className="flex items-center bg-bg-alt/60 px-3 text-[0.66rem] uppercase tracking-wider text-dim">
+                  <div key={v.key} style={pos} className="flex items-center bg-bg-alt/60 px-3 text-xs uppercase tracking-wider text-dim">
                     {r.text}
                   </div>
                 );

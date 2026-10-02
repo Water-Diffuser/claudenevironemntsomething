@@ -1,53 +1,74 @@
-// The draggable, resizable panel grid. The screen is always config.grid.cols x config.grid.rows
-// cells, stretched to fill the window, so layouts survive any window size.
-import { Suspense, useMemo } from 'react';
+// ============================================================================
+//  Workspace: the tiled panel grid.
+//
+//  The screen is always config.grid.cols x config.grid.rows cells, stretched to
+//  fill the window, so a layout survives any window size. Tiles meet edge to
+//  edge (no gaps) and are separated by one thin line.
+//
+//  Panels do not move by accident: dragging and resizing only work in "arrange"
+//  mode (the layout button in the top bar).
+// ============================================================================
+import { useMemo } from 'react';
 import GridLayout from 'react-grid-layout';
 import { config } from '@config';
 import type { LayoutItem } from '@shared/types';
 import { useElementSize } from '../lib/useElementSize';
-import { PANELS } from '../panels/registry';
-import { isFeatureOn, useSettings } from '../state/settings';
+import { panelById } from '../panels/registry';
+import { currentLayout, isEnabled, itemPanels } from '../settings/layouts';
+import { useSettings } from '../state/settings';
+import { useUI } from '../state/ui';
 import { PanelFrame } from './PanelFrame';
 
 export function Workspace() {
   const ui = useSettings((s) => s.ui);
   const update = useSettings((s) => s.update);
+  const arranging = useUI((s) => s.arranging);
   const { ref, width, height } = useElementSize<HTMLDivElement>();
-  const { cols, rows, margin } = config.grid;
+  const { cols, rows } = config.grid;
 
-  const layoutDefEarly = ui.customLayouts[ui.layout] ?? config.layouts[ui.layout] ?? config.layouts[config.defaultLayout];
-  const visible = useMemo(
-    () => PANELS.filter((p) => isFeatureOn(ui, p.id) && !ui.hidden.includes(p.id) && (layoutDefEarly.items.some((i) => i.i === p.id) || ui.extraPanels.includes(p.id))),
-    [ui, layoutDefEarly],
+  const layoutDef = currentLayout(ui);
+  const layoutKey = ui.customLayouts[ui.layout] ? ui.layout : config.layouts[ui.layout] ? ui.layout : config.defaultLayout;
+
+  // The cells to draw: each layout item, with only the panels in it that are switched on.
+  // A cell whose panels are all hidden simply isn't drawn.
+  const cells = useMemo(
+    () =>
+      layoutDef.items
+        .map((item) => ({ item, panels: itemPanels(item).filter((id) => isEnabled(ui, id)).map((id) => panelById(id)!) }))
+        .filter((c) => c.panels.length > 0),
+    [layoutDef, ui],
   );
-  const layoutDef = ui.customLayouts[ui.layout] ?? config.layouts[ui.layout] ?? config.layouts[config.defaultLayout];
 
-  // Panels in this layout that are visible, plus any visible panel the layout doesn't mention (placed at the bottom).
-  const items: Array<LayoutItem & { minW?: number; minH?: number }> = useMemo(() => {
-    const known = layoutDef.items.filter((i) => visible.some((p) => p.id === i.i));
-    // Panels that the layout doesn't place stay hidden, unless you added them from the panel menu.
-    const missing = visible.filter((p) => !layoutDef.items.some((i) => i.i === p.id) && ui.extraPanels.includes(p.id));
-    return [
-      ...known,
-      ...missing.map((p) => ({ i: p.id, x: 0, y: rows, w: Math.min(cols, 12), h: 8 })),
-    ].map((i) => {
-      const def = PANELS.find((p) => p.id === i.i);
-      return { ...i, minW: def?.minW ?? 3, minH: def?.minH ?? 3 };
-    });
-  }, [layoutDef, visible, cols, rows, ui.extraPanels]);
+  const items: Array<LayoutItem & { minW: number; minH: number }> = cells.map(({ item, panels }) => ({
+    ...item,
+    minW: Math.max(...panels.map((p) => p.minW ?? 3)),
+    minH: Math.max(...panels.map((p) => p.minH ?? 3)),
+  }));
 
-  // Stretch rows so `rows` rows exactly fill the available height.
-  const rowHeight = Math.max(8, (height - margin * (rows + 1)) / rows);
+  // `rows` rows exactly fill the available height.
+  const rowHeight = Math.max(8, height / rows);
+
+  // On a narrow window the tiles would be tiny, so all the layout's panels become tabs of one big panel.
+  const stacked = width > 0 && width < config.grid.stackBelow;
+  if (stacked) {
+    const all = cells.flatMap((c) => c.panels);
+    return (
+      <div ref={ref} className="min-h-0 min-w-0 flex-1 overflow-hidden border-t border-line">
+        {all.length > 0 && <PanelFrame cellId="stack" panels={all} />}
+      </div>
+    );
+  }
 
   return (
-    <div ref={ref} className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+    <div ref={ref} className={`min-h-0 min-w-0 flex-1 overflow-hidden border-t border-line ${arranging ? 'arranging' : ''}`}>
       {width > 0 && height > 0 && (
         <GridLayout
+          key={layoutKey}
           width={width}
           layout={items}
-          gridConfig={{ cols, rowHeight, margin: [margin, margin], containerPadding: [margin, margin], maxRows: Infinity }}
-          dragConfig={{ enabled: true, bounded: false, handle: '.panel-head', threshold: 3 }}
-          resizeConfig={{ enabled: true, handles: ['se'] }}
+          gridConfig={{ cols, rowHeight, margin: [0, 0], containerPadding: [0, 0], maxRows: rows }}
+          dragConfig={{ enabled: arranging, bounded: true, handle: '.panel-head', cancel: '.no-drag', threshold: 3 }}
+          resizeConfig={{ enabled: arranging, handles: ['se'] }}
           onLayoutChange={(next) => {
             // Save only real changes (the grid also reports once on startup).
             const moved = next.some((n) => {
@@ -55,23 +76,20 @@ export function Workspace() {
               return !old || old.x !== n.x || old.y !== n.y || old.w !== n.w || old.h !== n.h;
             });
             if (!moved) return;
-            const hiddenItems = layoutDef.items.filter((i) => !visible.some((p) => p.id === i.i));
-            const saved: LayoutItem[] = [...next.map(({ i, x, y, w, h }) => ({ i, x, y, w, h })), ...hiddenItems];
-            update({ customLayouts: { ...ui.customLayouts, [ui.layout]: { label: layoutDef.label, items: saved } } });
+            // Keep each cell's tabs, and keep the cells that are hidden right now.
+            const placed = new Map(next.map((n) => [n.i, n]));
+            const saved: LayoutItem[] = layoutDef.items.map((item) => {
+              const n = placed.get(item.i);
+              return n ? { ...item, x: n.x, y: n.y, w: n.w, h: n.h } : item;
+            });
+            update({ customLayouts: { ...ui.customLayouts, [layoutKey]: { label: layoutDef.label, items: saved } } });
           }}
         >
-          {visible.map((p) => {
-            const Body = p.component;
-            return (
-              <div key={p.id}>
-                <PanelFrame id={p.id} label={p.label} icon={p.icon}>
-                  <Suspense fallback={<div className="grid h-full place-items-center text-sm text-dim">Warming up…</div>}>
-                    <Body />
-                  </Suspense>
-                </PanelFrame>
-              </div>
-            );
-          })}
+          {cells.map(({ item, panels }) => (
+            <div key={item.i}>
+              <PanelFrame cellId={item.i} panels={panels} />
+            </div>
+          ))}
         </GridLayout>
       )}
     </div>

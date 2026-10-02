@@ -32,7 +32,7 @@ export interface UISettings {
   customLayouts: Record<string, NamedLayout>;
   /** Panels you hid. */
   hidden: string[];
-  /** Panels you added to the current layout from the panel menu (they appear at the bottom). */
+  /** (Old) panels added to a layout from the panel menu. New versions open them in the dock instead. */
   extraPanels: string[];
   /** Feature switches you changed (on top of config.features). */
   features: Record<string, boolean>;
@@ -42,7 +42,18 @@ export interface UISettings {
   calm: boolean;
   /** Sound volumes (0 to 1) and the mute switch. */
   audio: AudioSettings;
+  /** Is the sessions list (Setlist) open? */
   sidebarOpen: boolean;
+  /** The dock (strip along the bottom): open or folded, how tall, which tab, and panels you opened in it yourself. */
+  dockOpen: boolean;
+  /** Heights you dragged the dock to, per panel (a panel you never resized uses its own default). */
+  dockHeights: Record<string, number>;
+  dockActive: string | null;
+  dockExtra: string[];
+  /** Which tab each tab group shows (group name -> panel id). */
+  activeTabs: Record<string, string>;
+  /** The file explorer inside the editor: shown, or folded away. */
+  explorerOpen: boolean;
 }
 
 export const defaultUI = (): UISettings => ({
@@ -58,7 +69,13 @@ export const defaultUI = (): UISettings => ({
   dishes: {},
   calm: false,
   audio: { ...config.audio.volumes, muted: false },
-  sidebarOpen: typeof window === 'undefined' || window.innerWidth >= 1100,
+  sidebarOpen: false,
+  dockOpen: config.dock.startOpen,
+  dockHeights: {},
+  dockActive: null,
+  dockExtra: [],
+  activeTabs: {},
+  explorerOpen: typeof window !== 'undefined' && window.innerWidth >= 1500,
 });
 
 interface SettingsStore {

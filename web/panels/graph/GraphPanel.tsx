@@ -10,7 +10,7 @@
 import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Minus, Plus, Radar, RefreshCw, Sparkles } from 'lucide-react';
+import { Minus, Plus, Radar, RefreshCw, NotebookPen } from 'lucide-react';
 import { useElementSize } from '../../lib/useElementSize';
 import { config } from '@config';
 import { useKindLabels } from '../../state/settings';
@@ -236,32 +236,32 @@ function GraphInner() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-line px-2 py-1 text-xs">
-        <div className="flex overflow-hidden rounded-[var(--radius)] border border-line" role="group" aria-label="Graph level">
+        <div className="flex gap-0.5 rounded-md border border-line p-0.5" role="group" aria-label="Graph level">
           {(['files', 'functions'] as const).map((l) => (
-            <button key={l} onClick={() => setLevel(l)} className={`px-2 py-0.5 font-semibold uppercase tracking-wider ${level === l ? 'bg-accent text-on-accent' : 'text-dim hover:text-ink'}`}>
+            <button key={l} onClick={() => setLevel(l)} aria-pressed={level === l} className={`rounded px-2 py-0.5 transition-colors ${level === l ? 'bg-surface-hi text-ink' : 'text-dim hover:text-ink'}`}>
               {l}
             </button>
           ))}
         </div>
-        <button className={`btn btn-ghost !px-1.5 !py-0.5 text-xs ${impactOn ? 'border-accent text-accent-2' : ''}`} aria-pressed={impactOn} onClick={() => setImpactOn((v) => !v)} title="Light up everything that imports or calls what Claude just changed">
+        <button className={`btn btn-ghost !h-6 !px-2 text-xs ${impactOn ? 'is-on !text-accent' : ''}`} aria-pressed={impactOn} onClick={() => setImpactOn((v) => !v)} title="Light up everything that imports or calls what Claude just changed">
           <Radar size={13} /> impact
         </button>
         {level === 'functions' && (
           <span className="inline-flex items-center gap-0.5" title="How many import-steps away from the touched files to include">
-            <button className="btn btn-ghost !p-0.5" disabled={hops <= 0} onClick={() => setHops((h) => Math.max(0, h - 1))} aria-label="Narrow">
+            <button className="icon-btn icon-btn-sm" disabled={hops <= 0} onClick={() => setHops((h) => Math.max(0, h - 1))} aria-label="Narrow">
               <Minus size={12} />
             </button>
             <span className="text-dim">scope {hops}</span>
-            <button className="btn btn-ghost !p-0.5" disabled={hops >= 4} onClick={() => setHops((h) => Math.min(4, h + 1))} aria-label="Widen">
+            <button className="icon-btn icon-btn-sm" disabled={hops >= 4} onClick={() => setHops((h) => Math.min(4, h + 1))} aria-label="Widen">
               <Plus size={12} />
             </button>
           </span>
         )}
-        <button className="btn btn-ghost !p-0.5" onClick={() => (prevPositions.current = new Map(), setRelayout((n) => n + 1))} title="Re-arrange the graph from scratch">
-          <RefreshCw size={12} />
+        <button className="icon-btn icon-btn-sm" onClick={() => (prevPositions.current = new Map(), setRelayout((n) => n + 1))} title="Re-arrange the graph from scratch" aria-label="Re-arrange the graph">
+          <RefreshCw size={13} />
         </button>
         {expanded.size > 0 && (
-          <button className="chip hover:border-accent" onClick={() => setExpanded(new Set())}>
+          <button className="chip transition-colors hover:text-ink" onClick={() => setExpanded(new Set())}>
             fold all
           </button>
         )}
@@ -304,7 +304,7 @@ function GraphInner() {
 
       {selectedNode ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line px-2 py-1.5 text-xs">
-          <span className="min-w-0 truncate font-mono font-semibold text-accent-2">{selectedNode.sym ? `${selectedNode.sym.qname}()` : selectedNode.path}</span>
+          <span className="min-w-0 truncate font-mono text-ink">{selectedNode.sym ? `${selectedNode.sym.qname}()` : selectedNode.path}</span>
           {selectedNode.sym && <span className="text-dim">in {selectedNode.path}</span>}
           <span className="ml-auto flex gap-1.5">
             <button
@@ -313,7 +313,7 @@ function GraphInner() {
                 askExplain(send, { path: selectedNode.path, symbol: selectedNode.sym?.qname, startLine: selectedNode.sym?.startLine, endLine: selectedNode.sym?.endLine })
               }
             >
-              <Sparkles size={12} /> Explain
+              <NotebookPen size={12} /> Explain
             </button>
             <button
               className="btn !px-2 !py-0.5 text-xs"
@@ -327,7 +327,7 @@ function GraphInner() {
           </span>
         </div>
       ) : (
-        <div className="flex shrink-0 flex-wrap items-center gap-x-3 border-t border-line px-2 py-1 text-[0.68rem] text-dim">
+        <div className="flex shrink-0 flex-wrap items-center gap-x-3 border-t border-line px-2 py-1 text-xs text-dim">
           {(['read', 'edit', 'create'] as Kind[]).map((k) => (
             <span key={k} className="inline-flex items-center gap-1">
               <span className="inline-block size-2 rounded-sm" style={{ background: kindVar(k) }} />

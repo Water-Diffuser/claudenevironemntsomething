@@ -54,8 +54,7 @@ export function ProjectPicker() {
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-40 flex items-center justify-center p-4"
-          style={{ background: 'color-mix(in srgb, var(--c-shade) 60%, transparent)', backdropFilter: 'blur(4px)' }}
+          className="fixed inset-0 z-40 flex items-center justify-center bg-shade/60 p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -66,28 +65,28 @@ export function ProjectPicker() {
             role="dialog"
             aria-modal="true"
             aria-label={`Choose a ${label}`}
-            className="gloss flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-line bg-surface"
+            className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-[0_24px_60px_rgb(0_0_0/0.55)]"
             initial={{ opacity: 0, y: 16, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: dur(0.22) }}
           >
             <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-              <FolderOpen className="text-accent" size={20} />
-              <h2 className="m-0 font-display text-xl text-accent-2">
-                Choose a {label} <span className="font-sans text-sm text-dim">(project folder)</span>
+              <FolderOpen className="text-dim" size={18} />
+              <h2 className="m-0 font-display text-xl font-normal italic">
+                Choose a {label} <span className="font-sans text-xs not-italic text-dim">(a project folder)</span>
               </h2>
-              <button className="btn btn-ghost ml-auto !p-1.5" onClick={() => setOpen(false)} aria-label="Close">
-                <X size={18} />
+              <button className="icon-btn ml-auto" onClick={() => setOpen(false)} aria-label="Close">
+                <X size={16} />
               </button>
             </div>
 
             {server && server.recentProjects.length > 0 && (
               <div className="border-b border-line px-4 py-2">
-                <div className="mb-1 text-[0.68rem] uppercase tracking-wider text-dim">Recent</div>
+                <div className="eyebrow mb-1">Recent</div>
                 <div className="flex flex-wrap gap-1.5">
                   {server.recentProjects.map((p) => (
-                    <button key={p} className="chip hover:border-accent hover:text-ink" onClick={() => choose(p)} title={p}>
+                    <button key={p} className="chip transition-colors hover:text-ink" onClick={() => choose(p)} title={p}>
                       <FolderGit2 size={12} /> {p.split('/').filter(Boolean).pop()}
                     </button>
                   ))}
@@ -102,11 +101,11 @@ export function ProjectPicker() {
                 void go(pathInput);
               }}
             >
-              <button type="button" className="btn !p-2" title="Home folder" onClick={() => go(listing?.home)}>
-                <Home size={16} />
+              <button type="button" className="icon-btn border border-line" title="Home folder" aria-label="Home folder" onClick={() => go(listing?.home)}>
+                <Home size={15} />
               </button>
-              <button type="button" className="btn !p-2" title="Up one folder" disabled={!listing?.parent} onClick={() => go(listing?.parent ?? undefined)}>
-                <ArrowUp size={16} />
+              <button type="button" className="icon-btn border border-line" title="Up one folder" aria-label="Up one folder" disabled={!listing?.parent} onClick={() => go(listing?.parent ?? undefined)}>
+                <ArrowUp size={15} />
               </button>
               <input className="field font-mono text-sm" value={pathInput} onChange={(e) => setPathInput(e.target.value)} aria-label="Folder path" spellCheck={false} />
             </form>
@@ -115,16 +114,16 @@ export function ProjectPicker() {
               {error && <div className="p-3 text-bad">{error}</div>}
               {listing?.entries.length === 0 && <div className="p-3 text-dim">No sub-folders here.</div>}
               {listing?.entries.map((e) => (
-                <button key={e.path} className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left hover:bg-accent/10" onClick={() => go(e.path)} onDoubleClick={() => choose(e.path)}>
-                  {e.hasGit ? <FolderGit2 size={16} className="text-accent" /> : <Folder size={16} className={e.isProject ? 'text-accent-2' : 'text-dim'} />}
+                <button key={e.path} className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left transition-colors hover:bg-surface-hi" onClick={() => go(e.path)} onDoubleClick={() => choose(e.path)}>
+                  {e.hasGit ? <FolderGit2 size={15} className="text-accent" /> : <Folder size={15} className={e.isProject ? 'text-ink' : 'text-dim'} />}
                   <span className="truncate">{e.name}</span>
-                  {e.isProject && <span className="chip ml-auto !py-0">project</span>}
+                  {e.isProject && <span className="chip ml-auto">project</span>}
                 </button>
               ))}
             </div>
 
             <div className="flex items-center gap-3 border-t border-line px-4 py-3">
-              <label className="flex items-center gap-1.5 text-sm text-dim">
+              <label className="flex items-center gap-1.5 text-xs text-dim">
                 <input
                   type="checkbox"
                   checked={hidden}
@@ -136,7 +135,7 @@ export function ProjectPicker() {
                 show hidden
               </label>
               <button className="btn btn-primary ml-auto" disabled={!listing} onClick={() => listing && choose(listing.path)}>
-                <FolderOpen size={16} /> Open this folder
+                <FolderOpen size={14} /> Open this folder
               </button>
             </div>
           </motion.div>

@@ -42,8 +42,8 @@ export function SoundControl() {
 
   if (!on) {
     return (
-      <button className="btn btn-primary !px-2.5 !py-1 text-xs" onClick={() => void useAudio.getState().start()} title={`${startLabel}: turn the sound on. Nothing plays until you press this.`} aria-label={startLabel}>
-        <Volume2 size={14} /> <span className="max-lg:hidden">{startLabel}</span>
+      <button className="icon-btn" onClick={() => void useAudio.getState().start()} title={`${startLabel}: turn the sound on. Nothing plays until you press this.`} aria-label={startLabel}>
+        <VolumeX size={16} />
       </button>
     );
   }
@@ -51,14 +51,14 @@ export function SoundControl() {
   const set = (patch: Partial<AudioSettings>) => update({ audio: { ...audio, ...patch } });
   return (
     <div ref={box} className="relative">
-      <button className="btn !px-2 !py-1" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={soundLabel} title={soundLabel}>
-        {audio.muted ? <VolumeX size={16} className="text-dim" /> : <Volume2 size={16} className="text-accent-2" />}
+      <button className="icon-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={soundLabel} title={soundLabel}>
+        {audio.muted ? <VolumeX size={16} /> : <Volume2 size={16} className="text-accent" />}
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-lg border border-line bg-surface p-3 text-xs shadow-xl" role="dialog" aria-label={soundLabel}>
-          <div className="mb-2 flex items-center justify-between">
-            <span className="font-display tracking-widest text-accent-2">{soundLabel.toUpperCase()}</span>
-            <button className={`btn !px-2 !py-0.5 text-xs ${audio.muted ? 'border-accent text-accent-2' : ''}`} onClick={() => set({ muted: !audio.muted })} aria-pressed={audio.muted}>
+        <div className="menu absolute right-0 top-full mt-2 w-64 !p-3 text-xs" role="dialog" aria-label={soundLabel}>
+          <div className="mb-3 flex items-center justify-between">
+            <span className="eyebrow">{soundLabel}</span>
+            <button className={`btn !h-6 !px-2 text-xs ${audio.muted ? 'border-accent text-accent' : ''}`} onClick={() => set({ muted: !audio.muted })} aria-pressed={audio.muted}>
               {audio.muted ? <VolumeX size={12} /> : <Volume2 size={12} />} {audio.muted ? 'muted' : 'mute'}
             </button>
           </div>
@@ -85,7 +85,7 @@ export function SoundControl() {
           <div className="mt-3 flex items-end justify-between gap-2 border-t border-line pt-2 text-dim">
             <span className="leading-snug">{custom.length ? `${custom.length} of your own sounds loaded` : 'built-in sounds. Add yours in user-audio/'}</span>
             <button
-              className="btn btn-ghost shrink-0 !px-1.5 !py-0.5 text-xs"
+              className="btn btn-ghost shrink-0 !h-6 !px-2 text-xs"
               onClick={() => (useAudio.getState().stop(), setOpen(false))}
               title="Back to silence. Press Start Session again to resume."
             >

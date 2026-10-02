@@ -14,6 +14,7 @@ import { applyEvent, computeDerived, emptyDerived, type Derived } from './derive
 import { evaluateDishes } from './dishes';
 import { useGit } from './git';
 import { useScan } from './scan';
+import { useTerm } from './terminal';
 import { useSide } from './side';
 
 export interface Toast {
@@ -128,6 +129,12 @@ export const useApp = create<AppStore>((set, get) => ({
       case 'side_delta':
       case 'side_end':
         useSide.getState().apply(msg);
+        return;
+      case 'term_data':
+        useTerm.getState().append(msg.id, msg.text);
+        return;
+      case 'term_exit':
+        useTerm.getState().exit(msg.id, msg.code, msg.signal, msg.ms);
         return;
       case 'error':
         get().toast(msg.message, 'error');

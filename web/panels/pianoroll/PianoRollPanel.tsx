@@ -13,7 +13,7 @@ import { fmtDuration } from '../../lib/format';
 import { mix, readThemeColors } from '../../lib/themeColors';
 import { useElementSize } from '../../lib/useElementSize';
 import type { CallNote } from '../../state/derived';
-import { getView, subscribeView } from '../../state/store';
+import { getView, subscribeView, useDerived } from '../../state/store';
 import { useThemeRev } from '../../theme/themeRev';
 
 const KEY_W = 92;
@@ -28,6 +28,7 @@ interface Placed {
 }
 
 export default function PianoRollPanel() {
+  const hasNotes = useDerived().calls.length > 0; // (re-renders when the session changes; the canvas itself is drawn from refs)
   const kindLabels = useKindLabels();
   const { ref: boxRef, width, height } = useElementSize<HTMLDivElement>();
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -227,7 +228,7 @@ export default function PianoRollPanel() {
           <Crosshair size={12} /> follow
         </button>
       )}
-      {state.current.placed.length === 0 && <div className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-dim">No notes yet. Every tool call Claude makes shows up here.</div>}
+      {!hasNotes && <div className="empty pointer-events-none absolute inset-0">Every tool call Claude makes shows up here as a note.</div>}
     </div>
   );
 }

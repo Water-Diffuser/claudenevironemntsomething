@@ -31,7 +31,7 @@ export default function StatsPanel() {
   return (
     <div className="h-full overflow-y-auto p-3">
       <div
-        className="mx-auto max-w-[17rem] px-4 pb-6 pt-4 font-mono text-[0.78rem] leading-relaxed"
+        className="mx-auto max-w-[17rem] px-4 pb-6 pt-4 font-mono text-sm leading-relaxed"
         style={{
           background: 'color-mix(in srgb, var(--c-text) 94%, var(--c-bg))',
           color: 'var(--c-bg)',
@@ -42,8 +42,8 @@ export default function StatsPanel() {
         }}
       >
         <div className="text-center">
-          <div className="font-display text-lg font-bold tracking-[0.2em]">{title.toUpperCase()}</div>
-          <div className="text-[0.66rem] opacity-70">ORDER #{order} · {new Date(s.firstTs ?? Date.now()).toLocaleDateString()}</div>
+          <div className="font-display text-lg font-semibold tracking-[0.2em]">{title.toUpperCase()}</div>
+          <div className="text-xs opacity-70">ORDER #{order} · {new Date(s.firstTs ?? Date.now()).toLocaleDateString()}</div>
         </div>
         <div className="my-2 border-t border-dashed" style={{ borderColor: 'color-mix(in srgb, var(--c-bg) 50%, transparent)' }} />
         <Line label="Files changed" value={s.filesChanged.size} />
@@ -55,7 +55,7 @@ export default function StatsPanel() {
         <div className="my-2 border-t border-dashed" style={{ borderColor: 'color-mix(in srgb, var(--c-bg) 50%, transparent)' }} />
         <Line label="SUBTOTAL" value={fmtCost(d.usage.costUsd)} />
         <Line label={`${starsLabel} tip`} value={'★'.repeat(stars) + '☆'.repeat(3 - stars)} />
-        <div className="mt-3 text-center text-[0.68rem] tracking-[0.25em] opacity-80">THANK YOU, PRODUCER</div>
+        <div className="mt-3 text-center text-xs tracking-[0.25em] opacity-80">THANK YOU, PRODUCER</div>
       </div>
     </div>
   );

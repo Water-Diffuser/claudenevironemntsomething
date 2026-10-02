@@ -23,11 +23,11 @@ const COLOR_LABELS: Array<[keyof ThemeColors, string]> = [
 ];
 
 const EFFECTS: Array<['scanlines' | 'noise' | 'glow' | 'glitch' | 'gloss', string]> = [
-  ['scanlines', 'Scanlines'],
-  ['noise', 'VHS noise'],
+  ['scanlines', 'Scanlines (off by default)'],
+  ['noise', 'VHS noise (off by default)'],
   ['glow', 'Glow'],
-  ['glitch', 'Glitch'],
-  ['gloss', 'Gloss (shiny highlights)'],
+  ['glitch', 'Glitch (off by default)'],
+  ['gloss', 'Gloss (a highlight along panel edges)'],
 ];
 
 function FontSelect({ label, value, onChange }: { label: string; value: string; onChange: (stack: string) => void }) {
@@ -66,7 +66,7 @@ export function LookTab() {
                 key={id}
                 onClick={() => update({ theme: { base: id, overrides: {} } })}
                 aria-pressed={on}
-                className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition ${on ? 'border-accent bg-accent/10' : 'border-line hover:border-accent-2'}`}
+                className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${on ? 'border-accent bg-accent-soft' : 'border-line hover:bg-surface-hi'}`}
               >
                 <span className="flex shrink-0 overflow-hidden rounded-md border border-line">
                   {[t.colors.bg, t.colors.surface, t.colors.accent, t.colors.accent2].map((c) => (
@@ -74,7 +74,7 @@ export function LookTab() {
                   ))}
                 </span>
                 <span className="min-w-0">
-                  <span className="block font-semibold">{t.label}</span>
+                  <span className="block text-ink">{t.label}</span>
                   <span className="block text-xs text-dim">{t.blurb}</span>
                 </span>
               </button>
@@ -86,8 +86,8 @@ export function LookTab() {
       <Section
         title="Colors"
         actions={
-          <button className="btn btn-ghost !px-1.5 !py-0.5 text-xs" disabled={!tweaked} onClick={() => update({ theme: { ...ui.theme, overrides: {} } })} title="Go back to the mood's own values">
-            <RotateCcw size={12} /> reset tweaks
+          <button className="btn btn-ghost !h-6 !px-2 text-xs" disabled={!tweaked} onClick={() => update({ theme: { ...ui.theme, overrides: {} } })} title="Go back to the mood's own values">
+            <RotateCcw size={12} /> reset
           </button>
         }
       >
@@ -98,8 +98,9 @@ export function LookTab() {
       </Section>
 
       <Section title="Fonts">
-        <FontSelect label="Headings" value={theme.fonts.display} onChange={(v) => setOv({ fonts: { ...ov.fonts, display: v } })} />
-        <FontSelect label="Text" value={theme.fonts.body} onChange={(v) => setOv({ fonts: { ...ov.fonts, body: v } })} />
+        <FontSelect label="Headlines (the wordmark, empty states)" value={theme.fonts.display} onChange={(v) => setOv({ fonts: { ...ov.fonts, display: v } })} />
+        <FontSelect label="Reading (Claude's replies)" value={theme.fonts.body} onChange={(v) => setOv({ fonts: { ...ov.fonts, body: v } })} />
+        <FontSelect label="Interface (buttons, tabs, numbers)" value={theme.fonts.ui ?? theme.fonts.body} onChange={(v) => setOv({ fonts: { ...ov.fonts, ui: v } })} />
         <FontSelect label="Code" value={theme.fonts.mono} onChange={(v) => setOv({ fonts: { ...ov.fonts, mono: v } })} />
       </Section>
 

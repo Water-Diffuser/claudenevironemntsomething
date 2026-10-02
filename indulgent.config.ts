@@ -3,11 +3,14 @@
 //
 //  Almost everything you might want to tweak lives here:
 //    * app        ports, where files are saved, which Claude settings to load
+//    * models     the model / effort / thinking pickers (and a fallback model list)
+//    * commands   example "/" commands shown when Claude can't be asked for its own
 //    * labels     the names shown in the UI (rename "The Booth" to anything!)
 //    * colorCode  READ / SEARCHED / EDITED / CREATED / DELETED / RAN colors
 //    * toolKinds  which Claude tool belongs to which color-code category
 //    * themes     the mood presets (colors, fonts, effects)
-//    * layouts    where each panel sits on the screen
+//    * layouts    where each panel sits on the screen (and which ones share a tab group)
+//    * dock       the strip along the bottom that holds Terminal, Tests, Git...
 //    * features   switch whole panels / features on or off
 //    * limits     caps that keep big projects fast
 //    * hud        the numbers behind the meters and stars
@@ -20,6 +23,7 @@
 //  the defaults in this file. Delete that file to go back to these defaults.
 // ============================================================================
 import type { Kind } from './shared/events.ts';
+import type { CommandChoice, EffortLevel, ModelChoice, ThinkingChoice } from './shared/models.ts';
 import type { ColorCode, FontChoice, NamedLayout, Theme } from './shared/types.ts';
 
 // ---- app --------------------------------------------------------------------
@@ -51,6 +55,42 @@ const app = {
   sideModel: undefined as string | undefined,
 };
 
+// ---- models, effort and thinking ----------------------------------------------
+// The pickers next to the message box. In Live mode the app asks Claude which models your
+// account can use (and which effort levels each accepts) and shows that real list.
+// In Rehearsal mode, or if Claude can't be asked, this `fallback` list is shown instead.
+// (The effort lists below are placeholders: Claude's own list always wins when it is available.)
+const models = {
+  fallback: [
+    { value: 'default', label: 'Default', description: 'Whatever your Claude Code is set to use', efforts: ['low', 'medium', 'high', 'xhigh', 'max'], adaptiveThinking: true },
+    { value: 'opus', label: 'Opus', description: 'The most capable model, for hard problems', efforts: ['low', 'medium', 'high', 'xhigh', 'max'], adaptiveThinking: true },
+    { value: 'sonnet', label: 'Sonnet', description: 'Fast and capable, a good everyday choice', efforts: ['low', 'medium', 'high', 'xhigh', 'max'], adaptiveThinking: true },
+    { value: 'haiku', label: 'Haiku', description: 'The quickest and cheapest', efforts: [], adaptiveThinking: false },
+  ] as ModelChoice[],
+  /** Which model a brand-new install starts on. null = "Default" (your Claude Code's own choice). */
+  defaultModel: null as string | null,
+  /** Starting effort. null = "Auto" (the model's own default). */
+  defaultEffort: null as EffortLevel | null,
+  /** "auto" lets Claude decide when to think. "off" turns extended thinking off. */
+  defaultThinking: 'auto' as ThinkingChoice,
+  /** How many models are listed up front in the picker. The rest sit under "More versions". */
+  primaryCount: 5,
+  /** The words shown for each effort level. */
+  effortLabels: { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' } as Record<EffortLevel, string>,
+};
+
+// ---- slash commands ----------------------------------------------------------
+// Type "/" in the message box. A few commands are handled by this app itself (/new, /model...).
+// In Live mode the rest of the list is Claude Code's own commands and skills, fetched from Claude.
+// In Rehearsal mode (or if Claude can't be asked) these examples are shown instead.
+const commands = {
+  fallback: [
+    { name: 'compact', description: 'Summarize the conversation so far to free up context' },
+    { name: 'review', description: 'Review the changes on this branch' },
+    { name: 'init', description: 'Create a CLAUDE.md that explains this project' },
+  ] as CommandChoice[],
+};
+
 // ---- labels (rename anything) ----------------------------------------------
 const labels = {
   booth: 'The Booth',
@@ -65,6 +105,7 @@ const labels = {
   trails: 'Burn Marks',
   git: 'Recipe Book',
   replay: 'Playback',
+  terminal: 'Terminal',
   sketch: 'Floor Plan',
   explain: 'Liner Notes',
   pianoroll: 'Piano Roll',
@@ -163,28 +204,32 @@ const lightColorCode: Partial<ColorCode> = {
 const themes: Record<string, Theme> = {
   'spoken-for': {
     label: 'Spoken For',
-    blurb: 'Glossy hot-pink idol-pop on a dark stage.',
+    blurb: 'Night service. Quiet dark surfaces, one hot-pink signal light.',
     dark: true,
     colors: {
-      bg: '#0c0610',
-      bgAlt: '#140a1a',
-      surface: '#1c0f26',
-      surfaceHi: '#2b1740',
-      border: '#4b2862',
-      text: '#fdeef8',
-      textDim: '#bb98b4',
+      // Neutral near-blacks with the faintest plum tint. Pink is kept for the accent only.
+      bg: '#09080b',
+      bgAlt: '#0d0b10',
+      surface: '#121015',
+      surfaceHi: '#1a171e',
+      border: '#26222b',
+      text: '#ece8ef',
+      textDim: '#8d8697',
       accent: '#ff2e97',
-      accent2: '#ffa8dc',
-      onAccent: '#1a0412',
-      good: '#4cf0a0',
-      bad: '#ff4a5c',
-      warn: '#ffd54a',
+      accent2: '#ff8ec4',
+      onAccent: '#19030f',
+      good: '#4fd9a0',
+      bad: '#ff5d6c',
+      warn: '#f0c04e',
     },
-    fonts: { display: FRAUNCES, body: NUNITO, mono: JETBRAINS },
-    fontSize: 15,
-    radius: 14,
+    // Two families, four jobs: a soft serif for the voice (wordmark, headlines, Claude's replies)
+    // and a monospace for everything you operate (interface, numbers, code).
+    fonts: { display: FRAUNCES, body: FRAUNCES, ui: JETBRAINS, mono: JETBRAINS },
+    fontSize: 13,
+    radius: 8,
     animSpeed: 1,
-    effects: { scanlines: 0.12, noise: 0.12, glow: 0.6, glitch: 0.25, gloss: 0.8 },
+    // Restrained: the CRT effects are off by default (turn them up in the settings drawer).
+    effects: { scanlines: 0, noise: 0, glow: 0.3, glitch: 0, gloss: 0.15 },
   },
   static: {
     label: 'Static',
@@ -206,7 +251,7 @@ const themes: Record<string, Theme> = {
       warn: '#ffe066',
     },
     fonts: { display: VT323, body: JETBRAINS, mono: JETBRAINS },
-    fontSize: 14,
+    fontSize: 13,
     radius: 2,
     animSpeed: 1,
     effects: { scanlines: 0.7, noise: 0.55, glow: 0.5, glitch: 0.7, gloss: 0 },
@@ -231,8 +276,8 @@ const themes: Record<string, Theme> = {
       warn: '#b8860b',
     },
     fonts: { display: FRAUNCES, body: NUNITO, mono: JETBRAINS },
-    fontSize: 15,
-    radius: 16,
+    fontSize: 14,
+    radius: 10,
     animSpeed: 0.9,
     effects: { scanlines: 0, noise: 0.05, glow: 0.15, glitch: 0, gloss: 0.4 },
     colorCode: lightColorCode,
@@ -257,7 +302,7 @@ const themes: Record<string, Theme> = {
       warn: '#b07d00',
     },
     fonts: { display: PLAYFAIR, body: NUNITO, mono: JETBRAINS },
-    fontSize: 15,
+    fontSize: 14,
     radius: 4,
     animSpeed: 1,
     effects: { scanlines: 0, noise: 0, glow: 0, glitch: 0, gloss: 0.35 },
@@ -283,7 +328,7 @@ const themes: Record<string, Theme> = {
       warn: '#ffe14a',
     },
     fonts: { display: JETBRAINS, body: JETBRAINS, mono: JETBRAINS },
-    fontSize: 14,
+    fontSize: 13,
     radius: 6,
     animSpeed: 1,
     effects: { scanlines: 0.25, noise: 0.1, glow: 1, glitch: 0.15, gloss: 0.1 },
@@ -296,73 +341,80 @@ const defaultTheme = 'spoken-for';
 // The screen is a 24 x 24 grid that always stretches to fill the window, so
 // layouts keep working when you resize. Each item: x, y = top-left corner;
 // w, h = width and height in grid cells. `i` is the panel id.
-const grid = { cols: 24, rows: 24, margin: 10 };
+//
+// An item with `tabs` is a TAB GROUP: one cell that shows several panels as
+// tabs, one at a time. That is how a layout stays calm: the extra views are one
+// click away instead of all on screen at once. (`i` is then just a name for the cell.)
+//
+// margin 0 = the panels meet edge to edge, separated by thin lines.
+const grid = {
+  cols: 24,
+  rows: 24,
+  margin: 0,
+  /**
+   * On windows narrower than this many pixels the tiles would be too small to use, so the layout
+   * "stacks": all of its panels become tabs of ONE full-size panel instead.
+   */
+  stackBelow: 1000,
+};
 
 const layouts: Record<string, NamedLayout> = {
-  'control-room': {
-    label: 'Control Room',
+  // The everyday layout: talk, edit, and one view of the project (map, graph or ripples).
+  workbench: {
+    label: 'Workbench',
     items: [
-      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'map', x: 6, y: 0, w: 9, h: 10 },
-      { i: 'graph', x: 15, y: 0, w: 9, h: 10 },
-      { i: 'code', x: 6, y: 10, w: 9, h: 10 },
-      { i: 'diff', x: 15, y: 10, w: 9, h: 10 },
-      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
+      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
+      { i: 'code', x: 7, y: 0, w: 10, h: 24 },
+      { i: 'view', tabs: ['map', 'graph', 'impact', 'explain', 'sketch'], x: 17, y: 0, w: 7, h: 24 },
+    ],
+  },
+  // Check what Claude changed: the diff front and centre, the file beside it.
+  review: {
+    label: 'Review',
+    items: [
+      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
+      { i: 'diff', x: 7, y: 0, w: 10, h: 24 },
+      { i: 'code', x: 17, y: 0, w: 7, h: 24 },
     ],
   },
   'map-room': {
     label: 'Map Room',
     items: [
       { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'map', x: 6, y: 0, w: 9, h: 20 },
-      { i: 'graph', x: 15, y: 0, w: 9, h: 20 },
-      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
-    ],
-  },
-  studio: {
-    label: 'Studio',
-    items: [
-      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'pianoroll', x: 6, y: 0, w: 18, h: 8 },
-      { i: 'diff', x: 6, y: 8, w: 12, h: 12 },
-      { i: 'pitch', x: 18, y: 8, w: 6, h: 6 },
-      { i: 'heartbeat', x: 18, y: 14, w: 6, h: 6 },
-      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
-    ],
-  },
-  'green-room': {
-    label: 'Green Room',
-    items: [
-      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'menu', x: 6, y: 0, w: 6, h: 12 },
-      { i: 'dishes', x: 12, y: 0, w: 7, h: 12 },
-      { i: 'stats', x: 19, y: 0, w: 5, h: 12 },
-      { i: 'donut', x: 6, y: 12, w: 6, h: 8 },
-      { i: 'pitch', x: 12, y: 12, w: 7, h: 8 },
-      { i: 'heartbeat', x: 19, y: 12, w: 5, h: 8 },
-      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
-    ],
-  },
-  'test-kitchen': {
-    label: 'Test Kitchen',
-    items: [
-      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'tests', x: 6, y: 0, w: 9, h: 12 },
-      { i: 'trails', x: 15, y: 0, w: 9, h: 12 },
-      { i: 'map', x: 6, y: 12, w: 9, h: 8 },
-      { i: 'git', x: 15, y: 12, w: 9, h: 8 },
-      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
+      { i: 'map', x: 6, y: 0, w: 9, h: 24 },
+      { i: 'graph', x: 15, y: 0, w: 9, h: 24 },
     ],
   },
   inspector: {
     label: 'Inspector',
     items: [
-      { i: 'booth', x: 0, y: 0, w: 6, h: 24 },
-      { i: 'graph', x: 6, y: 0, w: 10, h: 12 },
-      { i: 'impact', x: 16, y: 0, w: 8, h: 12 },
-      { i: 'explain', x: 6, y: 12, w: 9, h: 8 },
-      { i: 'sketch', x: 15, y: 12, w: 9, h: 8 },
-      { i: 'replay', x: 6, y: 20, w: 18, h: 4 },
+      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
+      { i: 'graph', x: 7, y: 0, w: 9, h: 24 },
+      { i: 'side', tabs: ['impact', 'explain', 'sketch'], x: 16, y: 0, w: 8, h: 24 },
+    ],
+  },
+  'test-kitchen': {
+    label: 'Test Kitchen',
+    items: [
+      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
+      { i: 'checks', tabs: ['tests', 'trails'], x: 7, y: 0, w: 9, h: 24 },
+      { i: 'repo', tabs: ['git', 'map'], x: 16, y: 0, w: 8, h: 24 },
+    ],
+  },
+  studio: {
+    label: 'Studio',
+    items: [
+      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
+      { i: 'pianoroll', x: 7, y: 0, w: 17, h: 12 },
+      { i: 'signals', tabs: ['pitch', 'heartbeat', 'donut'], x: 7, y: 12, w: 17, h: 12 },
+    ],
+  },
+  'green-room': {
+    label: 'Green Room',
+    items: [
+      { i: 'booth', x: 0, y: 0, w: 7, h: 24 },
+      { i: 'courses', tabs: ['menu', 'dishes'], x: 7, y: 0, w: 9, h: 24 },
+      { i: 'numbers', tabs: ['stats', 'donut', 'pitch', 'heartbeat'], x: 16, y: 0, w: 8, h: 24 },
     ],
   },
   focus: {
@@ -371,7 +423,23 @@ const layouts: Record<string, NamedLayout> = {
   },
 };
 
-const defaultLayout = 'control-room';
+const defaultLayout = 'workbench';
+
+// ---- the dock ---------------------------------------------------------------
+// A strip along the bottom that holds the "workshop" panels as tabs. It starts folded
+// to just its tab bar, so it never competes with the work. Any panel can be opened there
+// from the "+" menu in the dock's tab bar.
+const dock = {
+  /** Panels in the dock, in tab order. (A panel that the current layout already shows is skipped.) */
+  panels: ['terminal', 'menu', 'tests', 'trails', 'git', 'replay'],
+  /** Start folded (true = open). */
+  startOpen: false,
+  /** Open height in pixels (drag the dock's top edge to change it; your choice is saved). */
+  height: 260,
+  minHeight: 140,
+  /** The dock never grows taller than this fraction of the window. */
+  maxFraction: 0.6,
+};
 
 // ---- features (turn things off here, or in the settings drawer) ------------
 const features: Record<string, boolean> = {
@@ -388,6 +456,7 @@ const features: Record<string, boolean> = {
   git: true,
   replay: true,
   menu: true,
+  terminal: true,
   dishes: true,
   pianoroll: true,
   pitch: true,
@@ -489,6 +558,8 @@ const languages = ['typescript', 'python', 'go'];
 
 export const config = {
   app,
+  models,
+  commands,
   labels,
   colorCode,
   kindLabels,
@@ -499,6 +570,7 @@ export const config = {
   grid,
   layouts,
   defaultLayout,
+  dock,
   features,
   limits,
   hud,
